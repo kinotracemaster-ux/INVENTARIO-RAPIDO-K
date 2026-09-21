@@ -121,7 +121,7 @@ Pendiente de confirmar en la práctica: no se ha probado si Kyte acepta la impor
 
 ## 5. Arquitectura y archivos
 
-**Un solo HTML + un archivo de datos. Sin servidor ni base de datos.**
+**Núcleo: un solo HTML + un archivo de datos, sin servidor ni base de datos.** (Desde el 21 sep 2026 hay además un servidor Node/Express opcional para desplegar fuera de Claude — ver nota al final de esta sección.)
 
 ```
 sys-a-kyte/
@@ -155,6 +155,8 @@ sys-a-kyte/
 - El sandbox del Artifact bloquea `<a download>`: por eso se usa `downloads.save`, que pide confirmación y admite una a la vez.
 - Guardar la tabla = `artifact.publish({'tabla.js': …})` (publicación por archivos, solo quien edita). Si falla, la tabla se usa solo en esa sesión y la app lo avisa.
 - No se declaró `db` a propósito: haría el Artifact exclusivo de la organización.
+
+**Deploy alternativo (Railway, agregado 21 sep 2026):** `server.js` (Express, en la raíz del repo) sirve `sys-a-kyte/app/` como sitio estático y redirige cualquier ruta a `index.html`. `package.json`/`npm start` en la raíz lo arrancan. Es solo un canal de distribución extra para quien no use el Artifact de Claude — el motor de negocio sigue siendo 100 % `sys-a-kyte.html` corriendo en el navegador, nada cambia ahí. **Pendiente:** probar el deploy real en Railway y decidir si `datos/` (825 KB de Excel) conviene excluirlo del bundle servido.
 
 **Fuera de Claude:** abrir `app/index.html` con `tabla.js` al lado (necesita internet para las librerías). Las descargas usan `<a download>`; "Guardar en la app" no guarda, así que para cambiar la tabla se regenera `tabla.js` con `tools/generar_tabla.py`.
 
