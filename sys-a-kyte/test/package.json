@@ -1,0 +1,9 @@
+{
+  "name": "sys-a-kyte-test",
+  "private": true,
+  "description": "Librerías que la app carga por CDN; aquí se instalan para probar sin internet",
+  "dependencies": {
+    "xlsx": "0.18.5",
+    "jszip": "3.10.1"
+  }
+}

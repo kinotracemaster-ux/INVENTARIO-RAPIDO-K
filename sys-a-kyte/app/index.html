@@ -1,0 +1,661 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light dark}body{margin:0;font:14px system-ui}img{max-width:100%}[hidden]{display:none!important}</style><title>SYS a Kyte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#EDF1F0; --surface:#FFFFFF; --surface-2:#F5F8F7;
+  --ink:#12292E; --ink-2:#496065; --line:#CFD9D7; --line-2:#E2E9E7;
+  --accent:#0A6B66; --accent-ink:#FFFFFF; --accent-soft:#D9EEEB; --accent-line:#8CC7C1;
+  --up:#17724A; --up-soft:#DAF0E4; --down:#B0322A; --down-soft:#F8DEDA; --warn:#8A5A00; --warn-soft:#FAEFCF;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1A1D; --surface:#152428; --surface-2:#1A2C31;
+    --ink:#E5EFED; --ink-2:#9DB2B5; --line:#2B4046; --line-2:#22363B;
+    --accent:#4FC2B6; --accent-ink:#06211F; --accent-soft:#17383A; --accent-line:#2E7C77;
+    --up:#5AD08F; --up-soft:#173626; --down:#FF8A7E; --down-soft:#402322; --warn:#E5B551; --warn-soft:#3A3013;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1A1D; --surface:#152428; --surface-2:#1A2C31;
+  --ink:#E5EFED; --ink-2:#9DB2B5; --line:#2B4046; --line-2:#22363B;
+  --accent:#4FC2B6; --accent-ink:#06211F; --accent-soft:#17383A; --accent-line:#2E7C77;
+  --up:#5AD08F; --up-soft:#173626; --down:#FF8A7E; --down-soft:#402322; --warn:#E5B551; --warn-soft:#3A3013;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--f-body);padding-inline:16px}
+.app{max-width:1040px;margin-inline:auto;padding-block:28px 64px;display:flex;flex-direction:column;gap:22px}
+h1,h2{font-family:var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
+h1{font-size:clamp(28px,4.4vw,36px);line-height:1.05;font-weight:700}
+h2{font-size:20px;font-weight:600}
+p{margin:0}
+.sub{font-size:12.5px;color:var(--ink-2)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums}
+
+.top{display:flex;flex-wrap:wrap;gap:14px 28px;align-items:flex-end;justify-content:space-between}
+.lede{margin-top:8px;color:var(--ink-2);max-width:54ch}
+.base{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;font-size:13px;color:var(--ink-2)}
+.base .k{font:500 11px var(--f-mono);text-transform:uppercase;letter-spacing:.07em}
+.base b{color:var(--ink);font-weight:600}
+.tag{font:500 11px var(--f-mono);padding:2px 8px;border-radius:999px;background:var(--warn-soft);color:var(--warn)}
+.lnk{background:none;border:0;padding:8px 2px;color:var(--accent);font:600 13px var(--f-body);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 16px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 14px var(--f-body);cursor:pointer;transition:border-color .12s,filter .12s}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri:hover:not(:disabled){filter:brightness(1.08)}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+
+.aviso{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:14px}
+.aviso.err{border-color:var(--down);background:var(--down-soft)}
+.aviso.warn{border-color:var(--warn);background:var(--warn-soft)}
+.aviso.info{border-color:var(--accent-line);background:var(--accent-soft)}
+.aviso .lnk{padding:0 2px;white-space:nowrap}
+
+#pend:empty,#aviso:empty,#bar:empty,#cambios:empty{display:none}
+.pend{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:10px;border:1px solid var(--accent-line);background:var(--accent-soft)}
+.pend strong{display:block;font-weight:600}
+
+.chain{display:grid;grid-template-columns:repeat(var(--cols,5),minmax(0,1fr));gap:22px}
+.node{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-height:176px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:inherit;text-align:left;font:inherit}
+.node .lab{display:block;font:500 11px var(--f-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);overflow-wrap:anywhere}
+.node .big{display:block;font:700 34px/1 var(--f-display);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.node .big.txt{font-size:19px;line-height:1.15;letter-spacing:-.01em}
+.node .cap{display:block;font-size:13px;color:var(--ink-2)}
+.node .sm{display:block;font:400 12px var(--f-mono);color:var(--ink-2);overflow-wrap:anywhere}
+.node .btn{margin-top:auto;width:100%}
+.node.on{border-color:var(--accent-line)}
+.node.on .big{color:var(--accent)}
+.node.sys{border:1.5px dashed var(--line);background:var(--surface-2);cursor:pointer}
+.node.sys:hover,.node.sys.drag{border-color:var(--accent);background:var(--accent-soft)}
+.node.sys.on{border-style:solid}
+.node .link{color:var(--accent);font-weight:600;margin-top:auto}
+.chain .node + .node::before{content:"";position:absolute;left:-16px;top:50%;width:9px;height:9px;border-top:2px solid var(--line);border-right:2px solid var(--line);transform:translateY(-50%) rotate(45deg)}
+.chain.run .node + .node::before{border-color:var(--accent)}
+.vacio{grid-column:1/-1;display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:22px;border:1.5px dashed var(--line);border-radius:10px;background:var(--surface-2)}
+
+.bar{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;justify-content:space-between}
+.rules{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--ink-2);max-width:60ch}
+.chk{display:inline-flex;gap:8px;align-items:center;color:var(--ink);font-weight:500;font-size:14px}
+.chk input{width:18px;height:18px;accent-color:var(--accent)}
+.acts{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.ok{font-size:13px;font-weight:600;color:var(--up)}
+
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px 18px}
+.fact{border-left:2px solid var(--line);padding:2px 0 2px 12px;display:flex;flex-direction:column;gap:2px}
+.fact .lab{font:500 11px var(--f-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2)}
+.fact .val{font:600 22px var(--f-display);font-variant-numeric:tabular-nums}
+.fact .note{font-size:12.5px;color:var(--ink-2)}
+
+.hd{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 13px;min-height:34px;font:500 13px var(--f-body);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.search{min-height:38px;width:min(260px,100%);border:1px solid var(--line);border-radius:8px;padding:0 12px;background:var(--surface);color:var(--ink);font:14px var(--f-body)}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:680px;font-size:13.5px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line-2);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font:500 11px var(--f-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);background:var(--surface-2)}
+td .arrow{color:var(--ink-2);margin-inline:5px}
+td .mut{color:var(--ink-2)}
+.delta{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:5px;font:500 12px var(--f-mono)}
+.delta.up{background:var(--up-soft);color:var(--up)}
+.delta.down{background:var(--down-soft);color:var(--down)}
+.foot{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-top:12px;font-size:13px;color:var(--ink-2)}
+.empty{color:var(--ink-2);max-width:60ch}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));max-width:min(92vw,520px);padding:11px 16px;border-radius:10px;background:var(--ink);color:var(--bg);font-size:14px;box-shadow:0 8px 28px -8px rgba(0,0,0,.45);z-index:20}
+.toast.err{background:var(--down);color:#fff}
+.toast.warn{background:var(--warn);color:#fff}
+
+@media (max-width:980px){
+  .chain{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .chain .node + .node::before{display:none}
+}
+@media (max-width:560px){
+  .chain{grid-template-columns:1fr}
+  .node{min-height:0}
+  .acts .btn{flex:1 1 100%}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+</style>
+
+</head><body><main class="app">
+  <header class="top">
+    <div>
+      <h1>SYS a Kyte</h1>
+      <p class="lede">Sube el archivo del SYS y baja los archivos de Kyte con el stock y el precio al día.</p>
+    </div>
+    <div class="base" id="base"></div>
+  </header>
+  <div id="pend"></div>
+  <div id="aviso"></div>
+  <section class="chain" id="chain" aria-label="Cadena de actualización"></section>
+  <section class="bar" id="bar"></section>
+  <section class="facts" id="facts" aria-label="Resumen del cruce"></section>
+  <section id="cambios" aria-label="Cambios"></section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<input type="file" id="f-sys" accept=".xlsx,.xlsm,.xls,.csv" hidden>
+<input type="file" id="f-tabla" accept=".xlsx,.xlsm,.xls" hidden>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="tabla.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ---------- Constantes ---------- */
+var COLS=['ID','Nombre*','Categoría','Código','Descripción','Costo unitario','Precio*','Precio de promoción','Mostrar en el catálogo','Destacar','Fracción?','Controlar stock','Stock actual','Stock mínimo'];
+var I={id:0,nombre:1,cat:2,cod:3,desc:4,costo:5,precio:6,promo:7,mostrar:8,dest:9,frac:10,ctrl:11,stock:12,min:13};
+var REQ=[I.id,I.nombre,I.cod,I.precio,I.stock];
+var ANCHOS=[24,60,22,14,50,12,12,14,12,10,10,12,12,12];
+var MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+/* ---------- Utilidades ---------- */
+var $=function(s){return document.querySelector(s);};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+function fmt(n){
+  if(n==null||n===''||Number.isNaN(n)) return '—';
+  var s=String(Math.round(Number(n)*100)/100), p=s.split('.');
+  return p[0].replace(/\B(?=(\d{3})+(?!\d))/g,'.')+(p[1]?','+p[1]:'');
+}
+function peso(n){return n==null?'—':'$ '+fmt(n);}
+function norm(s){return String(s==null?'':s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
+function k1(s){return String(s).trim().toUpperCase();}
+function k2(s){return String(s).toUpperCase().replace(/[\s\-_:.\/\\]+/g,'');}
+function aNum(v){
+  if(typeof v==='number') return v;
+  if(v==null||String(v).trim()==='') return NaN;
+  return Number(String(v).trim().replace(',','.'));
+}
+function corto(n){return String(n).split(/\s+/)[0];}
+function fechaCorta(d){return d.getDate()+' '+MES[d.getMonth()]+' '+d.getFullYear();}
+function hora(d){var h=d.getHours(),m=d.getMinutes();return (h%12||12)+':'+(m<10?'0':'')+m+' '+(h<12?'a. m.':'p. m.');}
+function fechaHora(d){return fechaCorta(d)+', '+hora(d);}
+function iso(d){var m=d.getMonth()+1,x=d.getDate();return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(x<10?'0':'')+x;}
+function tick(){return new Promise(function(r){setTimeout(r,30);});}
+function nombreArchivo(n,ext){return n.trim().replace(/[^\w\-]+/g,'_').replace(/^_+|_+$/g,'')+'_'+iso(new Date())+'.'+ext;}
+
+/* ---------- Estado ---------- */
+var S={
+  tabla:(window.__TABLA__&&window.__TABLA__.hojas&&window.__TABLA__.hojas.length)?window.__TABLA__:null,
+  sesion:false, sys:null, res:null, opts:{precio:true,mult:2},
+  filtro:'todos', q:'', limite:100, pend:null, aviso:null, saving:false,
+  dlP:Promise.resolve(null), artP:Promise.resolve(null)
+};
+try{
+  if(window.claude&&typeof window.claude.use==='function'){
+    S.dlP=Promise.resolve(window.claude.use('downloads')).catch(function(){return null;});
+    S.artP=Promise.resolve(window.claude.use('artifact')).catch(function(){return null;});
+  }
+}catch(e){}
+
+/* ---------- Lectura de archivos ---------- */
+async function leerLibro(file){
+  var buf=await file.arrayBuffer();
+  /* raw: en CSV deja todo como texto, así un código como 0044 no pierde el cero */
+  return XLSX.read(buf,{type:'array',codepage:65001,raw:true});
+}
+function limpio(v){return typeof v==='string'?v.replace(/\r\n?/g,'\n'):v;}
+function filas(ws){return XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:false});}
+
+function leerSys(wb){
+  var nombres=wb.SheetNames.slice().sort(function(a,b){return (/sys/i.test(b)?1:0)-(/sys/i.test(a)?1:0);});
+  for(var n=0;n<nombres.length;n++){
+    var rows=filas(wb.Sheets[nombres[n]]);
+    for(var r=0;r<Math.min(rows.length,25);r++){
+      var h=(rows[r]||[]).map(norm);
+      var ic=h.findIndex(function(x){return /^(articulo|codigo|sku|referencia)$/.test(x);});
+      var is=h.findIndex(function(x){return /^exist/.test(x);});
+      var ip=h.findIndex(function(x){return /^precio/.test(x);});
+      if(ic<0||is<0||ip<0) continue;
+      var id=h.findIndex(function(x){return /^descripcion/.test(x);});
+      var lista=[],m1=new Map(),m2=new Map(),inval=0,dups=0,neg=0,conStock=0;
+      for(var j=r+1;j<rows.length;j++){
+        var row=rows[j];
+        var art=row[ic]==null?'':String(row[ic]).trim();
+        if(!art) continue;
+        var stock=aNum(row[is]),precio=aNum(row[ip]);
+        if(Number.isNaN(stock)){inval++;continue;}
+        var rec={art:art,desc:(id>=0&&row[id]!=null)?String(row[id]):'',stock:stock,precio:Number.isNaN(precio)?0:precio};
+        var key=k1(art);
+        if(m1.has(key)){dups++;continue;}
+        m1.set(key,rec);lista.push(rec);
+        var kk=k2(art),arr=m2.get(kk);
+        if(arr)arr.push(rec);else m2.set(kk,[rec]);
+        if(stock>0)conStock++;
+        if(stock<0)neg++;
+      }
+      if(!lista.length) continue;
+      return {lista:lista,k1:m1,k2:m2,n:lista.length,conStock:conStock,neg:neg,dups:dups,inval:inval};
+    }
+  }
+  return null;
+}
+
+function leerTabla(wb){
+  var hojas=[];
+  wb.SheetNames.forEach(function(nm){
+    var rows=filas(wb.Sheets[nm]);
+    if(!rows.length) return;
+    var h=rows[0].map(norm);
+    var idx=COLS.map(function(c){return h.indexOf(norm(c));});
+    if(REQ.some(function(i){return idx[i]<0;})) return;
+    var datos=rows.slice(1).filter(function(r){return r.some(function(v){return v!=null&&v!=='';});}).map(function(r){
+      return idx.map(function(i){return (i<0||r[i]===undefined)?null:limpio(r[i]);});
+    });
+    hojas.push({nombre:nm.trim(),rows:datos});
+  });
+  return hojas;
+}
+
+/* ---------- Motor de actualización ---------- */
+function procesar(tabla,sys,opts){
+  var usados=new Set(),prod=new Set(),cod=new Set(),cruz=new Set();
+  var cambios=new Map(),sin=new Map(),formato=new Map();
+  var hojas=tabla.hojas.map(function(hoja){
+    var st={prod:hoja.rows.length,conCodigo:0,cruzan:0,sd:0,pd:0,sin:0,formato:0};
+    var rows=hoja.rows.map(function(row,ix){
+      var nr=row.slice();
+      var key=(row[I.id]!=null&&row[I.id]!=='')?String(row[I.id]):hoja.nombre+'#'+ix;
+      prod.add(key);
+      var codigo=row[I.cod]==null?'':String(row[I.cod]).trim();
+      var rec=null,tier='';
+      if(codigo){
+        st.conCodigo++;cod.add(key);
+        rec=sys.k1.get(k1(codigo));tier='exacto';
+        if(!rec){var a=sys.k2.get(k2(codigo));if(a&&a.length===1){rec=a[0];tier='formato';}}
+      }
+      var base={id:key,cod:codigo,nombre:row[I.nombre]==null?'':String(row[I.nombre]),cat:row[I.cat]==null?'':String(row[I.cat])};
+      if(!rec){
+        st.sin++;
+        if(!sin.has(key)) sin.set(key,Object.assign({},base,{stock:row[I.stock]==null?null:row[I.stock],motivo:codigo?'El código no está en el SYS':'Sin código'}));
+        return nr;
+      }
+      st.cruzan++;cruz.add(key);usados.add(rec);
+      if(tier==='formato'){st.formato++;if(!formato.has(key))formato.set(key,{cod:codigo,art:rec.art,hoja:hoja.nombre});}
+      /* stock */
+      var antes=(row[I.stock]==null||row[I.stock]==='')?null:Number(row[I.stock]);
+      var despues=Math.max(0,rec.stock);
+      if(antes===null&&despues===0)despues=null;
+      var sdif=despues!==antes;
+      nr[I.stock]=despues;
+      /* precio */
+      var pAntes=(row[I.precio]==null||row[I.precio]==='')?null:Number(row[I.precio]);
+      var pDespues=pAntes,pdif=false;
+      if(opts.precio&&rec.precio>0){
+        pDespues=Math.round(rec.precio*opts.mult);
+        if(pDespues!==pAntes){pdif=true;nr[I.precio]=pDespues;}
+      }
+      if(sdif||pdif){
+        if(sdif)st.sd++;
+        if(pdif)st.pd++;
+        var c=cambios.get(key);
+        if(!c){c=Object.assign({},base,{sb:antes,sa:despues,pb:pAntes,pa:pDespues,sd:sdif,pd:pdif,hojas:[]});cambios.set(key,c);}
+        c.hojas.push(hoja.nombre);
+      }
+      return nr;
+    });
+    return {nombre:hoja.nombre,rows:rows,st:st};
+  });
+  var sinArr=Array.from(sin.values()).sort(function(a,b){return (b.cod?1:0)-(a.cod?1:0);});
+  var nuevosArr=sys.lista.filter(function(r){return !usados.has(r);});
+  var nuevosCon=nuevosArr.filter(function(r){return r.stock>0;}).sort(function(a,b){return b.stock-a.stock;});
+  var tot={prod:prod.size,conCodigo:cod.size,cruzan:cruz.size};
+  return {
+    fecha:new Date(),hojas:hojas,cambios:Array.from(cambios.values()),
+    sin:sinArr,sinCod:sinArr.filter(function(x){return x.cod;}).length,
+    formato:Array.from(formato.values()),nuevos:nuevosCon,nuevosTotal:nuevosArr.length,nuevosConStock:nuevosCon.length,
+    tot:tot,pct:tot.conCodigo?tot.cruzan/tot.conCodigo:0,
+    opts:{precio:opts.precio,mult:opts.mult},sys:{nombre:sys.nombre,n:sys.n},base:false
+  };
+}
+
+/* ---------- Generación de archivos ---------- */
+function libroHoja(h){
+  var ws=XLSX.utils.aoa_to_sheet([COLS].concat(h.rows));
+  ws['!cols']=ANCHOS.map(function(w){return {wch:w};});
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,h.nombre.slice(0,31));
+  return new Uint8Array(XLSX.write(wb,{bookType:'xlsx',type:'array',compression:true}));
+}
+function agregar(wb,nombre,aoa,anchos){
+  var ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=anchos.map(function(w){return {wch:w};});
+  XLSX.utils.book_append_sheet(wb,ws,nombre);
+}
+function libroReporte(){
+  var r=S.res,wb=XLSX.utils.book_new();
+  var resumen=[
+    ['Reporte SYS a Kyte'],['Fecha',fechaHora(r.fecha)],['Archivo SYS',r.sys.nombre],['Artículos en el SYS',r.sys.n],
+    ['Regla de stock','Stock actual = existencia del SYS (negativos = 0)'],
+    ['Regla de precio',r.opts.precio?('Precio* = '+r.opts.mult+' × precio del SYS'):'El precio no se actualizó'],
+    [],['Archivo','Productos','Cruzan con SYS','Cambian de stock','Cambian de precio','Sin cruzar']
+  ];
+  r.hojas.forEach(function(h){resumen.push([h.nombre,h.st.prod,h.st.cruzan,h.st.sd,h.st.pd,h.st.sin]);});
+  agregar(wb,'Resumen',resumen,[28,16,16,18,18,14]);
+  agregar(wb,'Cambios',[['Código','Producto','Categoría','Stock antes','Stock después','Precio antes','Precio después','Archivos']].concat(
+    r.cambios.map(function(c){return [c.cod,c.nombre,c.cat,c.sb,c.sa,c.pb,c.pa,c.hojas.map(corto).join(' · ')];})),[16,60,22,12,14,14,16,28]);
+  agregar(wb,'Sin cruzar',[['Código','Producto','Categoría','Stock en Kyte','Motivo']].concat(
+    r.sin.map(function(x){return [x.cod,x.nombre,x.cat,x.stock,x.motivo];})),[16,60,22,14,30]);
+  agregar(wb,'Nuevos en SYS',[['Artículo','Descripción','Existencia','Precio SYS']].concat(
+    r.nuevos.map(function(x){return [x.art,x.desc,x.stock,x.precio];})),[18,60,12,12]);
+  if(r.formato.length) agregar(wb,'Por formato',[['Código en Kyte','Artículo en el SYS','Archivo']].concat(
+    r.formato.map(function(x){return [x.cod,x.art,x.hoja];})),[18,20,24]);
+  return new Uint8Array(XLSX.write(wb,{bookType:'xlsx',type:'array',compression:true}));
+}
+
+/* ---------- Entrega de archivos ---------- */
+async function entregar(nombre,datos,mime){
+  var dl=await S.dlP;
+  if(dl) return dl.save({filename:nombre,data:datos});
+  var url=URL.createObjectURL(new Blob([datos],{type:mime}));
+  var a=document.createElement('a');a.href=url;a.download=nombre;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){URL.revokeObjectURL(url);},5000);
+  return {status:'saved'};
+}
+var XLSX_MIME='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+async function conBloqueo(fn){
+  if(S.saving||!S.res) return;
+  S.saving=true;refrescarBotones();
+  try{
+    await tick();
+    var nombre=await fn();
+    toast('Listo: '+nombre);
+  }catch(e){
+    var c=e&&e.code;
+    if(c==='declined') toast('Descarga cancelada.');
+    else if(c==='rate_limited') toast('Hay otra descarga esperando tu confirmación. Acéptala y vuelve a intentar.','warn');
+    else toast('No pude bajar el archivo'+((e&&(e.message||e.code))?': '+(e.message||e.code):'.'),'err');
+  }finally{
+    S.saving=false;refrescarBotones();
+  }
+}
+function bajarHoja(i){
+  return conBloqueo(async function(){
+    var h=S.res.hojas[i],nombre=nombreArchivo(h.nombre,'xlsx');
+    await entregar(nombre,libroHoja(h),XLSX_MIME);
+    return nombre;
+  });
+}
+function bajarZip(){
+  return conBloqueo(async function(){
+    var zip=new JSZip();
+    S.res.hojas.forEach(function(h){zip.file(nombreArchivo(h.nombre,'xlsx'),libroHoja(h));});
+    var datos=await zip.generateAsync({type:'uint8array',compression:'DEFLATE'});
+    var nombre=nombreArchivo('Kyte_actualizado','zip');
+    await entregar(nombre,datos,'application/zip');
+    return nombre;
+  });
+}
+function bajarReporte(){
+  return conBloqueo(async function(){
+    var nombre=nombreArchivo('Reporte_SYS','xlsx');
+    await entregar(nombre,libroReporte(),XLSX_MIME);
+    return nombre;
+  });
+}
+
+/* ---------- Flujo principal ---------- */
+function correr(){
+  S.res=procesar(S.tabla,S.sys,S.opts);
+  S.filtro='todos';S.q='';S.limite=100;
+  S.aviso=null;
+  var r=S.res;
+  if(r.tot.conCodigo&&r.tot.cruzan===0){
+    S.aviso={tipo:'err',txt:'Ningún código de tu tabla apareció en ese archivo. Revisa que sea el archivo del SYS.'};
+  }else if(r.pct<0.5){
+    S.aviso={tipo:'warn',txt:'Solo cruzó el '+Math.round(r.pct*100)+'% de los productos con código. Revisa que sea el archivo correcto del SYS antes de subir algo a Kyte.'};
+  }else if(S.sys.dups||S.sys.inval){
+    S.aviso={tipo:'info',txt:'En el SYS ignoré '+fmt(S.sys.dups)+' artículo(s) repetido(s) y '+fmt(S.sys.inval)+' fila(s) sin existencia numérica.'};
+  }
+  render();
+}
+async function cargarSys(file){
+  if(!file) return;
+  if(!S.tabla){aviso('err','Primero carga la tabla base (Excel con las hojas de Kyte).');return;}
+  aviso('info','Leyendo el archivo del SYS…');
+  await tick();
+  try{
+    var wb=await leerLibro(file);
+    var sys=leerSys(wb);
+    if(!sys){aviso('err','No encontré las columnas Artículo, Exist. unidades y Precio en ese archivo. ¿Es el archivo del SYS?');return;}
+    sys.nombre=file.name;sys.mod=new Date(file.lastModified||Date.now());
+    S.sys=sys;
+    correr();
+  }catch(e){
+    aviso('err','No pude leer ese archivo. Pruébalo como .xlsx o .csv.');
+  }
+}
+async function prepararTabla(file){
+  if(!file) return;
+  aviso('info','Leyendo la tabla…');
+  await tick();
+  try{
+    var wb=await leerLibro(file);
+    var hojas=leerTabla(wb);
+    if(!hojas.length){aviso('err','No encontré hojas con el formato de Kyte (columnas ID, Nombre*, Código, Precio*, Stock actual).');return;}
+    S.aviso=null;
+    var detalle=hojas.map(function(h){return h.nombre+' '+fmt(h.rows.length);}).join(' · ');
+    S.pend={tipo:'nueva',titulo:'Tabla nueva lista: '+detalle,detalle:'Viene de "'+file.name+'". Reemplaza la tabla base actual.',
+      tabla:{v:1,guardada:new Date().toISOString(),origen:file.name,cols:COLS,hojas:hojas}};
+    render();
+  }catch(e){
+    aviso('err','No pude leer ese archivo. Sube el Excel con las hojas de Kyte.');
+  }
+}
+function proponerBase(){
+  var r=S.res;if(!r) return;
+  S.pend={tipo:'base',titulo:'Guardar este resultado como tabla base',
+    detalle:'La próxima vez los cambios se comparan contra lo que ya está en Kyte. Hazlo después de subir los archivos a Kyte.',
+    tabla:{v:1,guardada:new Date().toISOString(),origen:'Actualizada con '+r.sys.nombre+' · '+fechaCorta(r.fecha),cols:COLS,
+      hojas:r.hojas.map(function(h){return {nombre:h.nombre,rows:h.rows};})}};
+  renderPend();
+  var el=$('#pend');if(el&&el.scrollIntoView)el.scrollIntoView({block:'nearest'});
+}
+function mensajeGuardar(c){
+  if(c==='not_writer'||c==='not_granted'||c==='consent_required') return 'No tienes permiso para guardar en la app. Uso la tabla solo en esta sesión.';
+  if(c==='capability_disabled'||c==='capability_removed'||c==='not_declared'||c==='no_cap') return 'Esta vista no permite guardar la tabla. La uso solo en esta sesión.';
+  if(c==='conflict') return 'Alguien guardó otra versión al mismo tiempo. Recarga la página.';
+  if(c==='too_large') return 'La tabla es demasiado grande para guardarla.';
+  return 'No pude guardar la tabla ('+(c||'error')+'). La uso solo en esta sesión.';
+}
+async function guardarPend(){
+  var p=S.pend;if(!p) return;
+  var btn=$('#btn-pend-si');if(btn)btn.disabled=true;
+  var art=await S.artP,guardada=false,motivo='';
+  if(art){
+    try{await art.publish({'tabla.js':'window.__TABLA__='+JSON.stringify(p.tabla)+';'});guardada=true;}
+    catch(e){motivo=(e&&e.code)||'error';}
+  }else motivo='no_cap';
+  S.pend=null;
+  S.tabla=p.tabla;S.sesion=!guardada;
+  if(p.tipo==='base'){if(S.res)S.res.base=true;}
+  else if(S.sys){correr();}
+  render();
+  toast(guardada?'Tabla guardada en la app.':mensajeGuardar(motivo),guardada?'':'warn');
+}
+
+/* ---------- Avisos ---------- */
+var tToast=null;
+function toast(msg,tipo){
+  var t=$('#toast');t.textContent=msg;t.className='toast'+(tipo?' '+tipo:'');t.hidden=false;
+  clearTimeout(tToast);tToast=setTimeout(function(){t.hidden=true;},5500);
+}
+function aviso(tipo,txt){S.aviso={tipo:tipo,txt:txt};renderAviso();}
+
+/* ---------- Pintado ---------- */
+function keepFocus(fn){
+  var a=document.activeElement,id=a&&a.id,act=a&&a.dataset?a.dataset.act:null,i=a&&a.dataset?a.dataset.i:null;
+  fn();
+  var n=id?document.getElementById(id):null;
+  if(!n&&act)n=document.querySelector('[data-act="'+act+'"]'+(i!=null?'[data-i="'+i+'"]':''));
+  if(n&&n!==document.activeElement&&!n.disabled)n.focus({preventScroll:true});
+}
+function refrescarBotones(){keepFocus(function(){renderChain();renderBar();});}
+function render(){renderBase();renderPend();renderAviso();renderChain();renderBar();renderFacts();renderCambios();}
+
+function renderBase(){
+  var t=S.tabla,el=$('#base');
+  if(!t){el.innerHTML='<span class="k">Tabla base</span><b>sin cargar</b>';return;}
+  el.innerHTML='<span class="k">Tabla base</span><b>'+esc(fechaCorta(new Date(t.guardada)))+'</b><span>'+esc(t.origen||'')+'</span>'+
+    (S.sesion?'<span class="tag">solo esta sesión</span>':'')+
+    '<button type="button" class="lnk" id="btn-cambiar-tabla" data-act="cambiar-tabla">Cambiar tabla</button>';
+}
+function renderPend(){
+  var p=S.pend,el=$('#pend');
+  if(!p){el.innerHTML='';return;}
+  el.innerHTML='<div class="pend"><div><strong>'+esc(p.titulo)+'</strong><span class="sub">'+esc(p.detalle)+'</span></div>'+
+    '<div class="acts"><button type="button" class="btn pri" id="btn-pend-si" data-act="pend-si">Guardar en la app</button>'+
+    '<button type="button" class="btn" id="btn-pend-no" data-act="pend-no">Cancelar</button></div></div>';
+}
+function renderAviso(){
+  var a=S.aviso,el=$('#aviso');
+  if(!a){el.innerHTML='';return;}
+  el.innerHTML='<div class="aviso '+esc(a.tipo)+'" role="alert"><span>'+esc(a.txt)+'</span><button type="button" class="lnk" id="btn-cerrar-aviso" data-act="cerrar-aviso">Cerrar</button></div>';
+}
+function nodoSys(){
+  var s=S.sys;
+  if(!s) return '<button type="button" class="node sys" id="dz" data-act="pick-sys"><span class="lab">SYS INV</span><span class="big txt">Suelta aquí el archivo del SYS</span><span class="cap">Excel (.xlsx, .xls) o .csv. También puedes hacer clic para elegirlo.</span></button>';
+  return '<button type="button" class="node sys on" id="dz" data-act="pick-sys"><span class="lab">SYS INV · cargado</span><span class="big">'+fmt(s.n)+'</span>'+
+    '<span class="cap">artículos · '+fmt(s.conStock)+' con stock'+(s.neg?' · '+fmt(s.neg)+' en negativo':'')+'</span>'+
+    '<span class="sm">'+esc(s.nombre)+'<br>modificado '+esc(fechaHora(s.mod))+'</span><span class="cap link">Cambiar archivo</span></button>';
+}
+function renderChain(){
+  var el=$('#chain'),t=S.tabla,res=S.res;
+  if(!t){
+    el.className='chain';el.style.removeProperty('--cols');
+    el.innerHTML='<div class="vacio"><h2>Falta la tabla base</h2><p class="empty">Sube el Excel que tiene tus hojas en formato Kyte (por ejemplo KYTE CON SYS INV, CURREN, JOEFOX y POEDAGAR). La app lo guarda y de ahí en adelante solo subes el SYS.</p><button type="button" class="btn pri" id="btn-elegir-tabla" data-act="cambiar-tabla">Elegir Excel de la tabla</button></div>';
+    return;
+  }
+  el.className='chain'+(res?' run':'');
+  el.style.setProperty('--cols',Math.min(t.hojas.length+1,5));
+  var h=nodoSys();
+  t.hojas.forEach(function(hoja,i){
+    var st=res&&res.hojas[i]?res.hojas[i].st:null;
+    h+='<article class="node'+(st?' on':'')+'"><span class="lab">'+esc(hoja.nombre)+'</span>'+
+      (st?'<span class="big">'+fmt(st.sd)+'</span><span class="cap">cambian de stock</span><span class="sm">'+fmt(st.pd)+' de precio<br>cruzan '+fmt(st.cruzan)+' de '+fmt(st.prod)+'</span>'
+         :'<span class="big">'+fmt(hoja.rows.length)+'</span><span class="cap">productos</span><span class="sm">esperando el SYS</span>')+
+      '<button type="button" class="btn" id="btn-bajar-'+i+'" data-act="bajar" data-i="'+i+'"'+((st&&!S.saving)?'':' disabled')+'>Bajar .xlsx</button></article>';
+  });
+  el.innerHTML=h;
+}
+function renderBar(){
+  var el=$('#bar'),t=S.tabla,res=S.res;
+  if(!t){el.innerHTML='';return;}
+  var ok=res&&!S.saving?'':' disabled';
+  el.innerHTML='<div class="rules"><label class="chk" for="opt-precio"><input type="checkbox" id="opt-precio"'+(S.opts.precio?' checked':'')+'> Actualizar el precio ('+S.opts.mult+'× el precio del SYS)</label>'+
+    '<span>Stock actual = existencia del SYS (negativos quedan en 0). Lo que el SYS no trae no se toca.</span></div>'+
+    '<div class="acts"><button type="button" class="btn pri" id="btn-zip" data-act="zip"'+ok+'>Bajar los '+t.hojas.length+' (.zip)</button>'+
+    '<button type="button" class="btn" id="btn-reporte" data-act="reporte"'+ok+'>Reporte de cambios</button>'+
+    (res?(res.base?'<span class="ok">Guardada como tabla base</span>':'<button type="button" class="btn" id="btn-base" data-act="guardar-base"'+(S.saving?' disabled':'')+'>Guardar como tabla base</button>'):'')+'</div>';
+}
+function renderFacts(){
+  var el=$('#facts'),r=S.res;
+  if(!r){el.innerHTML='';el.hidden=true;return;}
+  el.hidden=false;
+  var f=function(lab,val,note){return '<div class="fact"><span class="lab">'+lab+'</span><span class="val">'+val+'</span><span class="note">'+note+'</span></div>';};
+  var h=f('Cruzan con el SYS',fmt(r.tot.cruzan)+' <span class="sub">de '+fmt(r.tot.prod)+'</span>',Math.round(r.pct*100)+'% de los productos que tienen código');
+  h+=f('Sin cruzar',fmt(r.sin.length),fmt(r.sinCod)+' tienen código y el SYS no los trae. No se tocan.');
+  if(r.formato.length) h+=f('Cruzados por formato',fmt(r.formato.length),'Código con guion o espacio distinto (DR-256-1 = DR256-1). Revísalos en el reporte.');
+  h+=f('En el SYS, no en tu tabla',fmt(r.nuevosTotal),fmt(r.nuevosConStock)+' con stock. Van al reporte; no se agregan.');
+  el.innerHTML=h;
+}
+function renderCambios(){
+  var el=$('#cambios'),r=S.res;
+  if(!S.tabla){el.innerHTML='';return;}
+  if(!r){el.innerHTML='<h2>Cambios</h2><p class="empty" style="margin-top:8px">Cuando subas el SYS vas a ver aquí cada producto que cambia, con lo que tiene hoy y lo que va a quedar, antes de bajar nada.</p>';return;}
+  el.innerHTML='<div class="hd"><h2>Cambios: antes → después</h2><div class="ctl"><div class="chips" id="chips" role="group" aria-label="Filtrar cambios"></div>'+
+    '<input type="search" class="search" id="buscar" placeholder="Buscar código o nombre" aria-label="Buscar código o nombre" value=""></div></div>'+
+    '<div id="lista"></div>';
+  pintarChips();pintarLista();
+}
+function pintarChips(){
+  var c=S.res.cambios,nS=c.filter(function(x){return x.sd;}).length,nP=c.filter(function(x){return x.pd;}).length;
+  var chip=function(f,t,n){return '<button type="button" class="chip" data-act="chip" data-f="'+f+'" aria-pressed="'+(S.filtro===f)+'">'+t+' '+fmt(n)+'</button>';};
+  $('#chips').innerHTML=chip('todos','Todos',c.length)+chip('stock','Stock',nS)+chip('precio','Precio',nP);
+}
+function deltaStock(x){
+  var d=(x.sa||0)-(x.sb||0);
+  if(!d) return '';
+  return '<span class="delta '+(d>0?'up':'down')+'">'+(d>0?'+':'−')+fmt(Math.abs(d))+'</span>';
+}
+function deltaPrecio(x){
+  if(!x.pb) return '';
+  var p=Math.round((x.pa/x.pb-1)*100);
+  if(!p) return '';
+  return '<span class="delta '+(p>0?'up':'down')+'">'+(p>0?'+':'−')+Math.abs(p)+'%</span>';
+}
+function pintarLista(){
+  var r=S.res,el=$('#lista');
+  if(!el) return;
+  if(!r.cambios.length){el.innerHTML='<p class="empty">Sin cambios: la tabla ya está al día con este SYS.</p>';return;}
+  var lista=r.cambios.filter(function(x){return S.filtro==='todos'||(S.filtro==='stock'&&x.sd)||(S.filtro==='precio'&&x.pd);});
+  var q=norm(S.q);
+  if(q) lista=lista.filter(function(x){return norm(x.cod+' '+x.nombre).indexOf(q)>=0;});
+  var vis=lista.slice(0,S.limite);
+  var filas=vis.map(function(x){
+    var st=x.sd?fmt(x.sb)+'<span class="arrow">→</span><b>'+fmt(x.sa)+'</b>'+deltaStock(x):'<span class="mut">'+fmt(x.sa)+'</span>';
+    var pr=x.pd?peso(x.pb)+'<span class="arrow">→</span><b>'+peso(x.pa)+'</b>'+deltaPrecio(x):'<span class="mut">'+peso(x.pa)+'</span>';
+    return '<tr><td class="mono">'+esc(x.cod)+'</td><td>'+esc(x.nombre)+'<div class="sub">'+esc(x.cat)+'</div></td><td class="mono">'+st+'</td><td class="mono">'+pr+'</td><td class="sub">'+esc(x.hojas.map(corto).join(' · '))+'</td></tr>';
+  }).join('');
+  el.innerHTML='<div class="tw"><table><thead><tr><th>Código</th><th>Producto</th><th>Stock</th><th>Precio</th><th>En</th></tr></thead><tbody>'+
+    (filas||'<tr><td colspan="5" class="mut">Nada coincide con esa búsqueda.</td></tr>')+'</tbody></table></div>'+
+    '<div class="foot"><span>Mostrando '+fmt(vis.length)+' de '+fmt(lista.length)+'</span>'+
+    (vis.length<lista.length?'<button type="button" class="btn" id="btn-mas" data-act="mas">Mostrar más</button>':'')+'</div>';
+}
+
+/* ---------- Eventos ---------- */
+var ACT={
+  'pick-sys':function(){$('#f-sys').click();},
+  'cambiar-tabla':function(){$('#f-tabla').click();},
+  'bajar':function(b){bajarHoja(Number(b.dataset.i));},
+  'zip':function(){bajarZip();},
+  'reporte':function(){bajarReporte();},
+  'guardar-base':function(){proponerBase();},
+  'pend-si':function(){guardarPend();},
+  'pend-no':function(){S.pend=null;renderPend();},
+  'cerrar-aviso':function(){S.aviso=null;renderAviso();},
+  'chip':function(b){S.filtro=b.dataset.f;S.limite=100;pintarChips();pintarLista();},
+  'mas':function(){S.limite+=200;pintarLista();}
+};
+document.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('[data-act]');
+  if(!b||b.disabled) return;
+  var f=ACT[b.dataset.act];if(f)f(b,e);
+});
+document.addEventListener('change',function(e){
+  var t=e.target;
+  if(t.id==='f-sys'){var f=t.files&&t.files[0];t.value='';cargarSys(f);}
+  else if(t.id==='f-tabla'){var g=t.files&&t.files[0];t.value='';prepararTabla(g);}
+  else if(t.id==='opt-precio'){S.opts.precio=t.checked;if(S.sys)correr();}
+});
+document.addEventListener('input',function(e){
+  if(e.target.id==='buscar'){S.q=e.target.value;S.limite=100;pintarLista();}
+});
+function hayArchivos(e){return e.dataTransfer&&Array.prototype.indexOf.call(e.dataTransfer.types||[],'Files')>=0;}
+document.addEventListener('dragover',function(e){if(!hayArchivos(e))return;e.preventDefault();var z=$('#dz');if(z)z.classList.add('drag');});
+document.addEventListener('dragleave',function(e){if(e.relatedTarget)return;var z=$('#dz');if(z)z.classList.remove('drag');});
+document.addEventListener('drop',function(e){
+  if(!hayArchivos(e))return;
+  e.preventDefault();
+  var z=$('#dz');if(z)z.classList.remove('drag');
+  var f=e.dataTransfer.files&&e.dataTransfer.files[0];
+  if(f)cargarSys(f);
+});
+
+render();
+})();
+</script>
+</body></html>
