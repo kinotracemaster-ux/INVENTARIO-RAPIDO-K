@@ -14,6 +14,10 @@ Corre como Claude Artifact (un HTML + `tabla.js`, sin backend) **y también** co
 
 Idioma de trabajo: **español**. El usuario (Kino) escribe informal y rápido; prefiere respuestas cortas, directas y prácticas.
 
+## Flujo de git
+
+**Se trabaja directo sobre `main`. Sin ramas por feature.** (Decisión de Kino, 21 sep 2026: quiere ver cada cambio en vivo — probablemente porque Railway despliega desde `main` — y prefiere verificar él mismo en vez de pasar por rama+PR.) Commitear y pushear a `main` cuando el cambio esté probado localmente (correr `test/run.py` antes si se tocó la lógica de cruce). No crear ramas `claude/...` salvo que Kino lo pida para algo puntual.
+
 ## Reglas que no se rompen (resumen — detalle en MEMORIA_PROYECTO.md §0)
 
 1. El SYS manda: es la fuente de verdad de stock y precio base.
@@ -87,6 +91,7 @@ Agregar una línea arriba de todo (más reciente primero) cada vez que se resuel
 
 | Fecha | Tipo | Nota |
 |---|---|---|
+| 2026-09-21 | decisión | Flujo de git cambiado: se pushea directo a `main`, sin ramas por feature (Kino verifica en vivo). Ver sección "Flujo de git" arriba. |
 | 2026-09-21 | avance | Creado `CLAUDE.md` como memoria de arranque para Claude Code, para no re-explorar el proyecto en cada sesión. |
 | 2026-09-21 | avance | Documentado en MEMORIA_PROYECTO.md el deploy Node/Express + Railway (`server.js`, `package.json`); seguía sin aparecer ahí. Pendiente probar el deploy real. |
 | 2026-09-21 | limpieza | Eliminado duplicado `SYS a Kyte — Memoria del proyecto` en la raíz (texto plano, contenido desactualizado). |
