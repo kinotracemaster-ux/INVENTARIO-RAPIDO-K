@@ -32,6 +32,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--f-body)
 h1,h2{font-family:var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
 h1{font-size:clamp(28px,4.4vw,36px);line-height:1.05;font-weight:700}
 h2{font-size:20px;font-weight:600}
+h3{margin:0;font:600 15px var(--f-body)}
 p{margin:0}
 .sub{font-size:12.5px;color:var(--ink-2)}
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
@@ -197,7 +198,7 @@ function nombreArchivo(n,ext){return n.trim().replace(/[^\w\-]+/g,'_').replace(/
 var S={
   tabla:(window.__TABLA__&&window.__TABLA__.hojas&&window.__TABLA__.hojas.length)?window.__TABLA__:null,
   sesion:false, sys:null, res:null, opts:{precio:true,mult:2},
-  shop:{datos:null,res:null,opts:{precio:true,mult:2.8}},
+  shop:{datos:null,res:null,opts:{precio:true,mult:2.8},limite:50},
   filtro:'todos', q:'', limite:100, pend:null, aviso:null, saving:false,
   dlP:Promise.resolve(null), artP:Promise.resolve(null)
 };
@@ -359,17 +360,23 @@ function procesar(tabla,sys,opts){
   };
 }
 
-/* Repetidos, huérfanas, SKU nuevos: fuera de alcance acá — esto solo
-   actualiza filas que ya existen en el archivo de Shopify, nunca agrega ni
-   saca filas. */
+/* Repetidos, huérfanas: fuera de alcance acá. Los SKU nuevos (del SYS, sin
+   usar en este archivo de Shopify) se muestran en pantalla y, si Kino las
+   pide, se pueden bajar como filas nuevas (ver filaNuevaShopify) — pero
+   nunca se agregan solas al Excel principal. */
 function procesarShopify(datos,sys,opts){
   var st={prod:datos.filas.length,cruzan:0,sd:0,pd:0,subeS:0,bajaS:0,subeP:0,bajaP:0};
-  var sinCruzar=[];
+  var sinCruzar=[],usados=new Set(),familias=new Set();
+  datos.filas.forEach(function(row){
+    var sku=row[datos.iSku]==null?'':String(row[datos.iSku]).trim();
+    if(sku) familias.add(familiaCod(sku));
+  });
   var filas=datos.filas.map(function(row){
     var sku=row[datos.iSku]==null?'':String(row[datos.iSku]).trim();
     if(!sku) return row;
     var rec=sys.k1.get(k1(sku));
     if(!rec){sinCruzar.push(sku);return row;}
+    usados.add(rec);
     st.cruzan++;
     var nr=row.slice();
     var antes=(row[datos.iQty]==null||row[datos.iQty]==='')?null:Number(row[datos.iQty]);
@@ -389,7 +396,47 @@ function procesarShopify(datos,sys,opts){
     }
     return nr;
   });
-  return {filas:filas,st:st,sinCruzar:sinCruzar};
+  var nuevosArr=sys.lista.filter(function(r){return !usados.has(r);});
+  var nuevos=nuevosArr.filter(function(r){return r.stock>0;}).sort(function(a,b){return b.stock-a.stock;})
+    .map(function(r){return Object.assign({},r,clasificarNuevo(r,familias));});
+  return {filas:filas,st:st,sinCruzar:sinCruzar,nuevos:nuevos};
+}
+/* Valores constantes en el 100% de los productos reales del archivo (ver
+   verificación 21 sep 2026): se copian tal cual. Published/Status se pisan
+   a "sin publicar / borrador" a propósito, para que no se vea en la tienda
+   hasta que Kino complete la fila a mano. Todo lo demás (fotos, categoría,
+   descripción, Option1 Value) queda vacío. */
+function slug(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
+function filaNuevaShopify(datos,x,mult){
+  var nr=datos.header.map(function(){return '';});
+  var set=function(nombre,val){var i=datos.header.indexOf(nombre);if(i>=0)nr[i]=val;};
+  set('Handle',slug(x.art));
+  set('Title',(x.art+' '+x.desc).trim());
+  set('Vendor','My Store');
+  set('Published','false');
+  set('Option1 Name','Referencia');
+  set('Variant SKU',x.art);
+  set('Variant Inventory Tracker','shopify');
+  set('Variant Inventory Qty',String(Math.max(0,x.stock)));
+  set('Variant Inventory Policy','deny');
+  set('Variant Fulfillment Service','manual');
+  set('Variant Price',Math.round(x.precio*mult).toFixed(2));
+  set('Variant Requires Shipping','false');
+  set('Variant Taxable','false');
+  set('Variant Weight Unit','kg');
+  set('Gift Card','false');
+  set('Status','draft');
+  return nr;
+}
+function xlsxShopifyConNuevos(){
+  var sh=S.shop,wb=XLSX.utils.book_new();
+  var nuevas=sh.res.nuevos.map(function(x){return filaNuevaShopify(sh.datos,x,sh.opts.mult);});
+  var ws=XLSX.utils.aoa_to_sheet([sh.datos.header].concat(sh.res.filas,nuevas));
+  XLSX.utils.book_append_sheet(wb,ws,'Products');
+  return new Uint8Array(XLSX.write(wb,{bookType:'xlsx',type:'array',compression:true}));
 }
 function xlsxShopify(){
   var sh=S.shop,wb=XLSX.utils.book_new();
@@ -514,6 +561,7 @@ async function cargarShopify(file){
     if(!datos){aviso('err','No encontré las columnas Variant SKU, Variant Inventory Qty y Variant Price en ese archivo. ¿Es el export de productos de Shopify?');return;}
     datos.nombre=file.name;
     S.shop.datos=datos;
+    S.shop.limite=50;
     if(datos.dupSku.length){
       aviso('warn','Hay '+fmt(datos.dupSku.length)+' Variant SKU repetido(s) dentro de ese archivo: '+esc(datos.dupSku.slice(0,5).join(', '))+(datos.dupSku.length>5?'…':'')+'. Cada fila se actualiza igual; convendría revisarlo en Shopify.');
     }else S.aviso=null;
@@ -527,6 +575,13 @@ function bajarShopify(){
   return conBloqueo(async function(){
     var nombre=nombreArchivo('Shopify_POEDAGAR_actualizado','xlsx');
     await entregar(nombre,xlsxShopify(),XLSX_MIME);
+    return nombre;
+  });
+}
+function bajarShopifyConNuevos(){
+  return conBloqueo(async function(){
+    var nombre=nombreArchivo('Shopify_POEDAGAR_con_nuevos','xlsx');
+    await entregar(nombre,xlsxShopifyConNuevos(),XLSX_MIME);
     return nombre;
   });
 }
@@ -711,11 +766,26 @@ function renderShopify(){
     h+='<div class="node on card"><span class="lab">Shopify</span>'+
       '<span class="big">'+fmt(r.st.sd)+'</span><span class="cap">cambian de stock'+badgesDir(r.st.subeS,r.st.bajaS)+'</span>'+
       '<span class="sm">'+fmt(r.st.pd)+' de precio'+badgesDir(r.st.subeP,r.st.bajaP)+'<br>cruzan '+fmt(r.st.cruzan)+' de '+fmt(r.st.prod)+
-      (r.sinCruzar.length?' · '+fmt(r.sinCruzar.length)+' sin cruzar':'')+'<br>'+esc(sh.datos.nombre)+'</span>'+
+      (r.sinCruzar.length?' · '+fmt(r.sinCruzar.length)+' sin cruzar':'')+
+      (r.nuevos.length?' · '+fmt(r.nuevos.length)+' SKU nuevos':'')+'<br>'+esc(sh.datos.nombre)+'</span>'+
       '<button type="button" class="btn pri" id="btn-bajar-shop" data-act="bajar-shop"'+ok+'>Bajar Excel actualizado</button></div>';
   }
   h+='<button type="button" class="lnk" id="btn-cambiar-shop" data-act="cambiar-shop">Cambiar archivo de Shopify</button>';
+  if(r&&r.nuevos.length) h+=nuevosShopifyHTML(r,sh);
   el.innerHTML=h;
+}
+function nuevosShopifyHTML(r,sh){
+  var ok=!S.saving?'':' disabled';
+  var vis=r.nuevos.slice(0,sh.limite);
+  var filas=vis.map(function(x){
+    return '<tr><td class="mono">'+esc(x.art)+'</td><td>'+esc(x.desc)+'</td><td class="mono">'+fmt(x.stock)+'</td><td class="mono">'+peso(Math.round(x.precio*sh.opts.mult))+'</td><td class="sub">'+esc(x.marca||'—')+'</td></tr>';
+  }).join('');
+  return '<h3>SKU nuevos: en el SYS, no en este archivo de Shopify</h3>'+
+    '<p class="sub">'+fmt(r.nuevos.length)+' con stock. No se agregan solos al Excel de arriba — para sumarlos, bajalos como filas nuevas y completá fotos, categoría y descripción a mano antes de subir.</p>'+
+    '<div class="tw"><table><thead><tr><th>SKU</th><th>Descripción</th><th>Stock</th><th>Precio propuesto</th><th>Marca</th></tr></thead><tbody>'+filas+'</tbody></table></div>'+
+    '<div class="foot"><span>Mostrando '+fmt(vis.length)+' de '+fmt(r.nuevos.length)+'</span>'+
+    (vis.length<r.nuevos.length?'<button type="button" class="btn" id="btn-mas-shop" data-act="mas-shop">Mostrar más</button>':'')+'</div>'+
+    '<button type="button" class="btn" id="btn-bajar-shop-nuevos" data-act="bajar-shop-nuevos"'+ok+'>Bajar Excel con estas filas agregadas</button>';
 }
 function pintarChips(){
   var c=S.res.cambios,nS=c.filter(function(x){return x.sd;}).length,nP=c.filter(function(x){return x.pd;}).length;
@@ -773,7 +843,9 @@ var ACT={
   'mas':function(){S.limite+=200;pintarLista();},
   'pick-shop':function(){$('#f-shop').click();},
   'cambiar-shop':function(){$('#f-shop').click();},
-  'bajar-shop':function(){bajarShopify();}
+  'bajar-shop':function(){bajarShopify();},
+  'bajar-shop-nuevos':function(){bajarShopifyConNuevos();},
+  'mas-shop':function(){S.shop.limite+=100;renderShopify();}
 };
 document.addEventListener('click',function(e){
   var b=e.target.closest&&e.target.closest('[data-act]');
