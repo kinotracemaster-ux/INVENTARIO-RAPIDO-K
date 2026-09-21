@@ -261,8 +261,17 @@ function leerTabla(wb){
 }
 
 /* ---------- Motor de actualización ---------- */
+var MARCAS=['POEDAGAR','JOEFOX','CURREN','SANSE','KARDOO','SKMEI','T5','JAKCOM','LUGANOS','CASIO','DISITE','EXTRI'];
+var ACCESORIOS=['ESTUCHE','CAJA','BOLSA','CORREA','PILA','TAPA','EXHIBIDOR'];
+function familiaCod(cod){return String(cod||'').trim().toUpperCase().replace(/-\d+$/,'');}
+function clasificarNuevo(x,familias){
+  var d=(x.desc||'').toUpperCase();
+  var marca=MARCAS.filter(function(m){return d.indexOf(m)>=0;})[0]||'';
+  var accesorio=ACCESORIOS.some(function(a){return d.indexOf(a)>=0;});
+  return {marca:marca,accesorio:accesorio,familiaExiste:familias.has(familiaCod(x.art))};
+}
 function procesar(tabla,sys,opts){
-  var usados=new Set(),prod=new Set(),cod=new Set(),cruz=new Set();
+  var usados=new Set(),prod=new Set(),cod=new Set(),cruz=new Set(),familias=new Set();
   var cambios=new Map(),sin=new Map(),formato=new Map();
   var hojas=tabla.hojas.map(function(hoja){
     var st={prod:hoja.rows.length,conCodigo:0,cruzan:0,sd:0,pd:0,sin:0,formato:0,subeS:0,bajaS:0,subeP:0,bajaP:0};
@@ -271,6 +280,7 @@ function procesar(tabla,sys,opts){
       var key=(row[I.id]!=null&&row[I.id]!=='')?String(row[I.id]):hoja.nombre+'#'+ix;
       prod.add(key);
       var codigo=row[I.cod]==null?'':String(row[I.cod]).trim();
+      if(codigo) familias.add(familiaCod(codigo));
       var rec=null,tier='';
       if(codigo){
         st.conCodigo++;cod.add(key);
@@ -311,7 +321,8 @@ function procesar(tabla,sys,opts){
   });
   var sinArr=Array.from(sin.values()).sort(function(a,b){return (b.cod?1:0)-(a.cod?1:0);});
   var nuevosArr=sys.lista.filter(function(r){return !usados.has(r);});
-  var nuevosCon=nuevosArr.filter(function(r){return r.stock>0;}).sort(function(a,b){return b.stock-a.stock;});
+  var nuevosCon=nuevosArr.filter(function(r){return r.stock>0;}).sort(function(a,b){return b.stock-a.stock;})
+    .map(function(r){return Object.assign({},r,clasificarNuevo(r,familias));});
   var tot={prod:prod.size,conCodigo:cod.size,cruzan:cruz.size};
   return {
     fecha:new Date(),hojas:hojas,cambios:Array.from(cambios.values()),
@@ -349,8 +360,8 @@ function libroReporte(){
     r.cambios.map(function(c){return [c.cod,c.nombre,c.cat,c.sb,c.sa,c.pb,c.pa,c.hojas.map(corto).join(' · ')];})),[16,60,22,12,14,14,16,28]);
   agregar(wb,'Sin cruzar',[['Código','Producto','Categoría','Stock en Kyte','Motivo']].concat(
     r.sin.map(function(x){return [x.cod,x.nombre,x.cat,x.stock,x.motivo];})),[16,60,22,14,30]);
-  agregar(wb,'Nuevos en SYS',[['Artículo','Descripción','Existencia','Precio SYS']].concat(
-    r.nuevos.map(function(x){return [x.art,x.desc,x.stock,x.precio];})),[18,60,12,12]);
+  agregar(wb,'Nuevos en SYS',[['Artículo','Descripción','Existencia','Precio SYS','Marca','Accesorio','Familia ya en tu tabla']].concat(
+    r.nuevos.map(function(x){return [x.art,x.desc,x.stock,x.precio,x.marca,x.accesorio?'Sí':'',x.familiaExiste?'Sí':''];})),[18,60,12,12,14,12,20]);
   if(r.formato.length) agregar(wb,'Por formato',[['Código en Kyte','Artículo en el SYS','Archivo']].concat(
     r.formato.map(function(x){return [x.cod,x.art,x.hoja];})),[18,20,24]);
   return new Uint8Array(XLSX.write(wb,{bookType:'xlsx',type:'array',compression:true}));

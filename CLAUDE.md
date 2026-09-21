@@ -92,6 +92,7 @@ Agregar una línea arriba de todo (más reciente primero) cada vez que se resuel
 
 | Fecha | Tipo | Nota |
 |---|---|---|
+| 2026-09-21 | avance | Reporte de cambios → hoja "Nuevos en SYS": 3 columnas nuevas (Marca, Accesorio, Familia ya en tu tabla) clasificando cada SKU nuevo con stock. Era parte de la v2 (§6.4), no construida hasta ahora; los 4 archivos de Kyte siguen sin tocarse (Kino eligió solo el reporte, no pantalla ni archivos). |
 | 2026-09-21 | avance | Tarjetas por hoja (`#chain`) ahora muestran cuánto de "cambian de stock" y "de precio" es suba vs. baja (`↑N` verde / `↓N` rojo), reusando `.delta up/down` ya existente — sin colores nuevos. Cambio solo visual: `procesar()` suma `st.subeS/bajaS/subeP/bajaP`, no toca los archivos que se descargan (test/run.py sigue en TODO OK, celda por celda). |
 | 2026-09-21 | decisión | Flujo de git cambiado: se pushea directo a `main`, sin ramas por feature (Kino verifica en vivo). Ver sección "Flujo de git" arriba. |
 | 2026-09-21 | avance | Creado `CLAUDE.md` como memoria de arranque para Claude Code, para no re-explorar el proyecto en cada sesión. |
