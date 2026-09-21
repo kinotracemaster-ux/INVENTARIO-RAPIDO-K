@@ -431,17 +431,18 @@ function filaNuevaShopify(datos,x,mult){
   set('Status','draft');
   return nr;
 }
+var HOJA_SHOPIFY='POEDAGAR ACTUALIZADA';
 function xlsxShopifyConNuevos(){
   var sh=S.shop,wb=XLSX.utils.book_new();
   var nuevas=sh.res.nuevos.map(function(x){return filaNuevaShopify(sh.datos,x,sh.opts.mult);});
   var ws=XLSX.utils.aoa_to_sheet([sh.datos.header].concat(sh.res.filas,nuevas));
-  XLSX.utils.book_append_sheet(wb,ws,'Products');
+  XLSX.utils.book_append_sheet(wb,ws,HOJA_SHOPIFY);
   return new Uint8Array(XLSX.write(wb,{bookType:'xlsx',type:'array',compression:true}));
 }
 function xlsxShopify(){
   var sh=S.shop,wb=XLSX.utils.book_new();
   var ws=XLSX.utils.aoa_to_sheet([sh.datos.header].concat(sh.res.filas));
-  XLSX.utils.book_append_sheet(wb,ws,'Products');
+  XLSX.utils.book_append_sheet(wb,ws,HOJA_SHOPIFY);
   return new Uint8Array(XLSX.write(wb,{bookType:'xlsx',type:'array',compression:true}));
 }
 
@@ -573,14 +574,14 @@ async function cargarShopify(file){
 }
 function bajarShopify(){
   return conBloqueo(async function(){
-    var nombre=nombreArchivo('Shopify_POEDAGAR_actualizado','xlsx');
+    var nombre=nombreArchivo(HOJA_SHOPIFY,'xlsx');
     await entregar(nombre,xlsxShopify(),XLSX_MIME);
     return nombre;
   });
 }
 function bajarShopifyConNuevos(){
   return conBloqueo(async function(){
-    var nombre=nombreArchivo('Shopify_POEDAGAR_con_nuevos','xlsx');
+    var nombre=nombreArchivo(HOJA_SHOPIFY+' con nuevos','xlsx');
     await entregar(nombre,xlsxShopifyConNuevos(),XLSX_MIME);
     return nombre;
   });
@@ -759,6 +760,7 @@ function renderShopify(){
   }
   h+='<div class="rules"><label class="chk" for="shop-precio"><input type="checkbox" id="shop-precio"'+(sh.opts.precio?' checked':'')+'> Actualizar precio</label>'+
     '<label class="chk" for="shop-mult">× <input type="number" class="search mini" id="shop-mult" min="0" step="0.01" value="'+esc(sh.opts.mult)+'"> el precio del SYS</label>'+
+    '<span>Kyte usa SYS × 2. Acá es ese mismo precio + 40% (2 × 1,4 = 2,8, por eso el default) — cambiá el número si hace falta.</span>'+
     '<span>Stock = existencia del SYS (negativos quedan en 0). Lo que no cruza no se toca.</span></div>';
   var r=sh.res;
   if(r){
