@@ -10,6 +10,8 @@ Memoria de arranque para Claude Code en este repo. Se carga sola al empezar cada
 
 "SYS a Kyte": app que sube el inventario del SYS (Excel), cruza por SKU contra el catálogo de Kyte y devuelve los 4 archivos de Kyte actualizados (stock + precio) más un reporte de cambios. Reemplaza un flujo manual con XLOOKUP.
 
+**Además** (sub-módulo agregado 21 sep 2026): con el mismo SYS ya cargado, también actualiza el export de productos de Shopify de la tienda POEDAGAR (CSV) — stock siempre, precio opcional con un multiplicador que carga Kino a mano. Ver MEMORIA_PROYECTO.md §9.
+
 Corre como Claude Artifact (un HTML + `tabla.js`, sin backend) **y también** como app Node/Express desplegable en Railway (agregado 21 sep 2026 — ver "Estado actual" abajo).
 
 Idioma de trabajo: **español**. El usuario (Kino) escribe informal y rápido; prefiere respuestas cortas, directas y prácticas.
@@ -46,7 +48,7 @@ sys-a-kyte/
 └── datos/                      Excel de ejemplo (SYS + hojas Kyte, 18 sep 2026)
 ```
 
-Toda la lógica vive en `sys-a-kyte/app/sys-a-kyte.html` (funciones clave: `leerSys`, `leerTabla`, `procesar`, `libroHoja`/`libroReporte`, estado en el objeto `S`). Flujo para cambiar lógica: editar ese archivo → `build_index.py` → `test/run.py`.
+Toda la lógica vive en `sys-a-kyte/app/sys-a-kyte.html` (funciones clave: `leerSys`, `leerTabla`, `procesar`, `libroHoja`/`libroReporte`, estado en el objeto `S`, para Kyte; `leerShopify`, `procesarShopify`, `csvShopify`, estado en `S.shop`, para el sub-módulo de Shopify — MEMORIA_PROYECTO.md §9). Flujo para cambiar lógica: editar ese archivo → `build_index.py` → `test/run.py`.
 
 ## Comandos
 
@@ -70,6 +72,7 @@ python3 sys-a-kyte/tools/generar_tabla.py "mi_excel.xlsx"
 - **v1**: publicada (18 sep 2026) como Claude Artifact. Cruce exacto + por formato. Funcionando en producción.
 - **v2**: especificada (decisiones de Kino del 19 sep 2026 — MEMORIA_PROYECTO.md §4-6) pero **sin construir todavía**: cruce por nombre cuando falta el Código, manejo de repetidos/copias/huérfanas, SKU nuevos clasificados. Criterios de aceptación ya definidos en §6.
 - **Deploy Railway** (21 sep 2026): se agregó `server.js` + `package.json` (Express) para servir la app fuera de Claude Artifacts. **Pendiente:** no estaba documentado (ya se agregó nota en MEMORIA_PROYECTO.md §5), falta probarlo en Railway real, y decidir si `datos/` (825 KB de Excel) debe excluirse del bundle de producción.
+- **Sub-módulo Shopify · POEDAGAR** (21 sep 2026): construido y verificado a mano con un export real (541/541 filas OK, celda por celda). **Pendiente:** sin test automatizado en `test/run.py` (el CSV real de Shopify no se subió al repo, es data de Kino); sin drag&drop (solo botón); sin tabla "antes → después" fila por fila, solo resumen. Detalle completo: MEMORIA_PROYECTO.md §9.
 
 ## Errores y trampas conocidas (resumen — detalle en MEMORIA_PROYECTO.md §8)
 
@@ -81,6 +84,7 @@ python3 sys-a-kyte/tools/generar_tabla.py "mi_excel.xlsx"
 - El Artifact solo carga scripts desde `cdnjs` y `cdn.jsdelivr.net/npm/`; el sandbox bloquea `fetch` y descargas directas (`tabla.js` se carga con `<script src>`, no `fetch`; las descargas usan `downloads.save`, una a la vez).
 - No se declaró la capacidad `db` en el Artifact a propósito (lo haría exclusivo de la organización).
 - **Sesiones de Claude Code en la nube:** el Chromium pre-instalado del sandbox puede no coincidir con la versión que trae el `pip install playwright` más reciente (error `Executable doesn't exist at .../chromium_headless_shell-XXXX`). No correr `playwright install` (no hay red para bajar el browser o se pisa el pre-instalado). Ver qué revisión hay en `/opt/pw-browsers/*.json` o en el Playwright de Node global (`/opt/node22/lib/node_modules/playwright/package.json`) e instalar esa misma versión con pip, ej. `pip install playwright==1.56.0`.
+- **No commitear exports reales de Shopify ni otros archivos que suba Kino con datos propios** (precios, stock real) a menos que él lo pida — son datos de negocio, no fixtures de prueba. Por eso el sub-módulo de Shopify (§9 de MEMORIA_PROYECTO.md) no tiene test automatizado: verificarlo a mano con un CSV real subido en el chat, comparando el CSV descargado contra un cálculo independiente en Python (mismo criterio que `test/run.py`), antes de tocar `leerShopify`/`procesarShopify`.
 
 ## Limpieza hecha el 21 sep 2026
 
@@ -92,6 +96,7 @@ Agregar una línea arriba de todo (más reciente primero) cada vez que se resuel
 
 | Fecha | Tipo | Nota |
 |---|---|---|
+| 2026-09-21 | avance | Nuevo sub-módulo: actualizar el export de productos de Shopify (POEDAGAR) por Variant SKU — stock siempre, precio opcional con multiplicador a mano (Kino lo carga en pantalla, no está fijo en el código; ronda 2.8× según datos cruzados). Nunca agrega/saca filas ni toca las otras 45 columnas del CSV. Verificado con un export real: 541/541 filas idénticas contra cálculo independiente. Detalle: MEMORIA_PROYECTO.md §9. |
 | 2026-09-21 | avance | Reporte de cambios → hoja "Nuevos en SYS": 3 columnas nuevas (Marca, Accesorio, Familia ya en tu tabla) clasificando cada SKU nuevo con stock. Era parte de la v2 (§6.4), no construida hasta ahora; los 4 archivos de Kyte siguen sin tocarse (Kino eligió solo el reporte, no pantalla ni archivos). |
 | 2026-09-21 | avance | Tarjetas por hoja (`#chain`) ahora muestran cuánto de "cambian de stock" y "de precio" es suba vs. baja (`↑N` verde / `↓N` rojo), reusando `.delta up/down` ya existente — sin colores nuevos. Cambio solo visual: `procesar()` suma `st.subeS/bajaS/subeP/bajaP`, no toca los archivos que se descargan (test/run.py sigue en TODO OK, celda por celda). |
 | 2026-09-21 | decisión | Flujo de git cambiado: se pushea directo a `main`, sin ramas por feature (Kino verifica en vivo). Ver sección "Flujo de git" arriba. |

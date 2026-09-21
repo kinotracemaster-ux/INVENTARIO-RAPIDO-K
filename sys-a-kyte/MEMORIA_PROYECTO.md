@@ -224,7 +224,27 @@ python3 test/run.py          # ~1 min; debe terminar en "RESUMEN: TODO OK"
 
 ---
 
-## 9. Prompt para continuar (pegar junto con este archivo y el zip)
+## 9. Sub-módulo: Shopify · POEDAGAR (agregado 21 sep 2026)
+
+Además de Kyte, la misma app actualiza el export de productos de Shopify de la tienda POEDAGAR (Shopify → Productos → Exportar → CSV). Vive en la misma página, debajo de "Cambios: antes → después" — sección `#shopify` en `sys-a-kyte.html`, estado en `S.shop` (independiente de `S.opts`/`S.res`, que son de Kyte).
+
+**Qué hace:** reusa el mismo SYS que ya subiste arriba (no se sube dos veces). Por cada fila del CSV de Shopify, busca su `Variant SKU` en el SYS:
+- Si lo encuentra: `Variant Inventory Qty` = existencia del SYS (negativo → 0, igual que Kyte). Si el checkbox "Actualizar precio" está activo, `Variant Price` = redondeado(precio SYS × multiplicador). **El multiplicador es un número que carga Kino a mano** (input en pantalla, default 2.8 — no está fijo en el código). Se llegó a 2.8 cruzando un export real contra el SYS: 504 de 532 coincidencias daban exactamente ese número; quedan como excepción manual los productos que Kino les puso otro precio a mano.
+- Si no lo encuentra: la fila no se toca, se cuenta en "sin cruzar" (mismo principio que Kyte: "lo que no cruza no se toca").
+
+**Lo que nunca hace:** agregar ni sacar filas — igual que con Kyte, el SYS no trae Categoría, imágenes, Body HTML, SEO ni los otros ~44 campos que Shopify necesita para un producto nuevo. Tampoco toca ninguna otra columna del export: se preservan exactamente como estaban, carácter por carácter, salvo las 2 celdas (`Variant Inventory Qty`, `Variant Price`) que cambian.
+
+**Aviso de SKU repetidos:** si el CSV subido trae el mismo `Variant SKU` en más de una fila (pasa en la práctica — caso real visto: `938B-5` ×4), se avisa en pantalla pero se procesa igual (cada fila con ese SKU recibe el mismo stock/precio; conviene revisarlo en Shopify).
+
+**Funciones en `sys-a-kyte.html`:** `leerShopify()` (ubica columnas `Variant SKU`/`Variant Inventory Qty`/`Variant Price` por nombre, conserva las 47 columnas originales tal cual), `procesarShopify()` (el cruce), `csvShopify()` (arma el CSV de salida con `XLSX.utils.sheet_to_csv`), `renderShopify()` (pantalla, reusa `badgesDir()` de las tarjetas de Kyte para los `↑`/`↓`).
+
+**Verificado (21 sep 2026)** con un export real de Shopify (107 productos, 541 variantes/SKU): 532 de 541 SKU cruzaron con el SYS de prueba (`datos/INVENTARIO_KINO_18_de_sep.xlsx`), y el CSV descargado coincidió celda por celda (541 filas × 47 columnas) contra un cálculo independiente en Python.
+
+**Pendiente / no construido:** no quedó como test automatizado en `test/run.py` — el CSV real de Shopify no se subió al repo por ser datos propios de Kino, no de prueba. Si se toca `leerShopify`/`procesarShopify`, conviene rearmar la verificación a mano (subir un CSV real, comparar contra un cálculo independiente) antes de publicar. Tampoco hay drag&drop para el CSV de Shopify (solo botón), ni tabla "antes → después" fila por fila como la de Kyte — solo el resumen en la tarjeta.
+
+---
+
+## 10. Prompt para continuar (pegar junto con este archivo y el zip)
 
 ```
 Lee MEMORIA_PROYECTO.md y app/sys-a-kyte.html. Implementa la v2 de la sección 6

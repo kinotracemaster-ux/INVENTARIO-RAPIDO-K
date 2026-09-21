@@ -113,6 +113,10 @@ td .mut{color:var(--ink-2)}
 .foot{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-top:12px;font-size:13px;color:var(--ink-2)}
 .empty{color:var(--ink-2);max-width:60ch}
 
+.shop{display:flex;flex-direction:column;gap:14px}
+.shop .card{max-width:280px}
+.search.mini{width:74px;padding:0 8px;text-align:right}
+
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));max-width:min(92vw,520px);padding:11px 16px;border-radius:10px;background:var(--ink);color:var(--bg);font-size:14px;box-shadow:0 8px 28px -8px rgba(0,0,0,.45);z-index:20}
 .toast.err{background:var(--down);color:#fff}
 .toast.warn{background:var(--warn);color:#fff}
@@ -143,10 +147,12 @@ td .mut{color:var(--ink-2)}
   <section class="bar" id="bar"></section>
   <section class="facts" id="facts" aria-label="Resumen del cruce"></section>
   <section id="cambios" aria-label="Cambios"></section>
+  <section class="shop" id="shopify" aria-label="Shopify Poedagar"></section>
 </main>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <input type="file" id="f-sys" accept=".xlsx,.xlsm,.xls,.csv" hidden>
 <input type="file" id="f-tabla" accept=".xlsx,.xlsm,.xls" hidden>
+<input type="file" id="f-shop" accept=".csv" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -191,6 +197,7 @@ function nombreArchivo(n,ext){return n.trim().replace(/[^\w\-]+/g,'_').replace(/
 var S={
   tabla:(window.__TABLA__&&window.__TABLA__.hojas&&window.__TABLA__.hojas.length)?window.__TABLA__:null,
   sesion:false, sys:null, res:null, opts:{precio:true,mult:2},
+  shop:{datos:null,res:null,opts:{precio:true,mult:2.8}},
   filtro:'todos', q:'', limite:100, pend:null, aviso:null, saving:false,
   dlP:Promise.resolve(null), artP:Promise.resolve(null)
 };
@@ -258,6 +265,25 @@ function leerTabla(wb){
     hojas.push({nombre:nm.trim(),rows:datos});
   });
   return hojas;
+}
+
+function leerShopify(wb){
+  var rows=filas(wb.Sheets[wb.SheetNames[0]]);
+  if(!rows.length) return null;
+  var h=rows[0].map(norm);
+  var iSku=h.indexOf(norm('Variant SKU'));
+  var iQty=h.indexOf(norm('Variant Inventory Qty'));
+  var iPrecio=h.indexOf(norm('Variant Price'));
+  if(iSku<0||iQty<0||iPrecio<0) return null;
+  var filasD=rows.slice(1).filter(function(r){return r.some(function(v){return v!=null&&v!=='';});}).map(function(r){return r.map(limpio);});
+  var vistos=new Set(),dup=new Set();
+  filasD.forEach(function(r){
+    var s=r[iSku]==null?'':String(r[iSku]).trim();
+    if(!s) return;
+    if(vistos.has(k1(s))) dup.add(s);
+    vistos.add(k1(s));
+  });
+  return {header:rows[0],filas:filasD,iSku:iSku,iQty:iQty,iPrecio:iPrecio,dupSku:Array.from(dup)};
 }
 
 /* ---------- Motor de actualización ---------- */
@@ -331,6 +357,43 @@ function procesar(tabla,sys,opts){
     tot:tot,pct:tot.conCodigo?tot.cruzan/tot.conCodigo:0,
     opts:{precio:opts.precio,mult:opts.mult},sys:{nombre:sys.nombre,n:sys.n},base:false
   };
+}
+
+/* SKU nuevos, repetidos, huérfanas: fuera de alcance acá — esto solo actualiza
+   filas que ya existen en el archivo de Shopify, nunca agrega ni saca filas. */
+function procesarShopify(datos,sys,opts){
+  var st={prod:datos.filas.length,cruzan:0,sd:0,pd:0,subeS:0,bajaS:0,subeP:0,bajaP:0};
+  var sinCruzar=[];
+  var filas=datos.filas.map(function(row){
+    var sku=row[datos.iSku]==null?'':String(row[datos.iSku]).trim();
+    if(!sku) return row;
+    var rec=sys.k1.get(k1(sku));
+    if(!rec){sinCruzar.push(sku);return row;}
+    st.cruzan++;
+    var nr=row.slice();
+    var antes=(row[datos.iQty]==null||row[datos.iQty]==='')?null:Number(row[datos.iQty]);
+    var despues=Math.max(0,rec.stock);
+    if(antes===null&&despues===0)despues=null;
+    if(despues!==antes){
+      st.sd++;if(despues>(antes||0))st.subeS++;else st.bajaS++;
+      nr[datos.iQty]=despues==null?'':String(despues);
+    }
+    if(opts.precio&&rec.precio>0){
+      var pAntes=(row[datos.iPrecio]==null||row[datos.iPrecio]==='')?null:Number(row[datos.iPrecio]);
+      var pDespues=Math.round(rec.precio*opts.mult);
+      if(pDespues!==pAntes){
+        st.pd++;if(pDespues>(pAntes||0))st.subeP++;else st.bajaP++;
+        nr[datos.iPrecio]=pDespues.toFixed(2);
+      }
+    }
+    return nr;
+  });
+  return {filas:filas,st:st,sinCruzar:sinCruzar};
+}
+function csvShopify(){
+  var sh=S.shop;
+  var ws=XLSX.utils.aoa_to_sheet([sh.datos.header].concat(sh.res.filas));
+  return new TextEncoder().encode(XLSX.utils.sheet_to_csv(ws));
 }
 
 /* ---------- Generación de archivos ---------- */
@@ -431,7 +494,39 @@ function correr(){
   }else if(S.sys.dups||S.sys.inval){
     S.aviso={tipo:'info',txt:'En el SYS ignoré '+fmt(S.sys.dups)+' artículo(s) repetido(s) y '+fmt(S.sys.inval)+' fila(s) sin existencia numérica.'};
   }
+  if(S.shop.datos) S.shop.res=procesarShopify(S.shop.datos,S.sys,S.shop.opts);
   render();
+}
+function reprocesarShopify(){
+  if(!S.shop.datos||!S.sys) return;
+  S.shop.res=procesarShopify(S.shop.datos,S.sys,S.shop.opts);
+  renderShopify();
+}
+async function cargarShopify(file){
+  if(!file) return;
+  aviso('info','Leyendo el archivo de Shopify…');
+  await tick();
+  try{
+    var wb=await leerLibro(file);
+    var datos=leerShopify(wb);
+    if(!datos){aviso('err','No encontré las columnas Variant SKU, Variant Inventory Qty y Variant Price en ese archivo. ¿Es el export de productos de Shopify?');return;}
+    datos.nombre=file.name;
+    S.shop.datos=datos;
+    if(datos.dupSku.length){
+      aviso('warn','Hay '+fmt(datos.dupSku.length)+' Variant SKU repetido(s) dentro de ese archivo: '+esc(datos.dupSku.slice(0,5).join(', '))+(datos.dupSku.length>5?'…':'')+'. Cada fila se actualiza igual; convendría revisarlo en Shopify.');
+    }else S.aviso=null;
+    reprocesarShopify();
+    render();
+  }catch(e){
+    aviso('err','No pude leer ese archivo. Pruébalo como .csv exportado de Shopify.');
+  }
+}
+function bajarShopify(){
+  return conBloqueo(async function(){
+    var nombre=nombreArchivo('Shopify_POEDAGAR_actualizado','csv');
+    await entregar(nombre,csvShopify(),'text/csv');
+    return nombre;
+  });
 }
 async function cargarSys(file){
   if(!file) return;
@@ -514,8 +609,8 @@ function keepFocus(fn){
   if(!n&&act)n=document.querySelector('[data-act="'+act+'"]'+(i!=null?'[data-i="'+i+'"]':''));
   if(n&&n!==document.activeElement&&!n.disabled)n.focus({preventScroll:true});
 }
-function refrescarBotones(){keepFocus(function(){renderChain();renderBar();});}
-function render(){renderBase();renderPend();renderAviso();renderChain();renderBar();renderFacts();renderCambios();}
+function refrescarBotones(){keepFocus(function(){renderChain();renderBar();renderShopify();});}
+function render(){renderBase();renderPend();renderAviso();renderChain();renderBar();renderFacts();renderCambios();renderShopify();}
 
 function renderBase(){
   var t=S.tabla,el=$('#base');
@@ -592,6 +687,34 @@ function renderCambios(){
     '<div id="lista"></div>';
   pintarChips();pintarLista();
 }
+function renderShopify(){
+  var el=$('#shopify');if(!el) return;
+  if(!S.sys){
+    el.innerHTML='<h2>Shopify · POEDAGAR</h2><p class="empty">Cuando subas el SYS arriba, acá vas a poder subir el export de productos de Shopify y actualizar stock (y precio, si querés) por Variant SKU.</p>';
+    return;
+  }
+  var sh=S.shop,h='<h2>Shopify · POEDAGAR</h2>';
+  if(!sh.datos){
+    h+='<p class="empty">Subí el CSV que exportás de Shopify (Productos → Exportar). Actualizo cada Variant SKU que cruce con el SYS — no toco nada más del archivo, ni agrego ni saco filas.</p>'+
+      '<button type="button" class="btn pri" id="btn-pick-shop" data-act="pick-shop">Elegir CSV de Shopify</button>';
+    el.innerHTML=h;
+    return;
+  }
+  h+='<div class="rules"><label class="chk" for="shop-precio"><input type="checkbox" id="shop-precio"'+(sh.opts.precio?' checked':'')+'> Actualizar precio</label>'+
+    '<label class="chk" for="shop-mult">× <input type="number" class="search mini" id="shop-mult" min="0" step="0.01" value="'+esc(sh.opts.mult)+'"> el precio del SYS</label>'+
+    '<span>Stock = existencia del SYS (negativos quedan en 0). Lo que no cruza no se toca.</span></div>';
+  var r=sh.res;
+  if(r){
+    var ok=!S.saving?'':' disabled';
+    h+='<div class="node on card"><span class="lab">Shopify</span>'+
+      '<span class="big">'+fmt(r.st.sd)+'</span><span class="cap">cambian de stock'+badgesDir(r.st.subeS,r.st.bajaS)+'</span>'+
+      '<span class="sm">'+fmt(r.st.pd)+' de precio'+badgesDir(r.st.subeP,r.st.bajaP)+'<br>cruzan '+fmt(r.st.cruzan)+' de '+fmt(r.st.prod)+
+      (r.sinCruzar.length?' · '+fmt(r.sinCruzar.length)+' sin cruzar':'')+'<br>'+esc(sh.datos.nombre)+'</span>'+
+      '<button type="button" class="btn pri" id="btn-bajar-shop" data-act="bajar-shop"'+ok+'>Bajar CSV actualizado</button></div>';
+  }
+  h+='<button type="button" class="lnk" id="btn-cambiar-shop" data-act="cambiar-shop">Cambiar archivo de Shopify</button>';
+  el.innerHTML=h;
+}
 function pintarChips(){
   var c=S.res.cambios,nS=c.filter(function(x){return x.sd;}).length,nP=c.filter(function(x){return x.pd;}).length;
   var chip=function(f,t,n){return '<button type="button" class="chip" data-act="chip" data-f="'+f+'" aria-pressed="'+(S.filtro===f)+'">'+t+' '+fmt(n)+'</button>';};
@@ -645,7 +768,10 @@ var ACT={
   'pend-no':function(){S.pend=null;renderPend();},
   'cerrar-aviso':function(){S.aviso=null;renderAviso();},
   'chip':function(b){S.filtro=b.dataset.f;S.limite=100;pintarChips();pintarLista();},
-  'mas':function(){S.limite+=200;pintarLista();}
+  'mas':function(){S.limite+=200;pintarLista();},
+  'pick-shop':function(){$('#f-shop').click();},
+  'cambiar-shop':function(){$('#f-shop').click();},
+  'bajar-shop':function(){bajarShopify();}
 };
 document.addEventListener('click',function(e){
   var b=e.target.closest&&e.target.closest('[data-act]');
@@ -657,6 +783,9 @@ document.addEventListener('change',function(e){
   if(t.id==='f-sys'){var f=t.files&&t.files[0];t.value='';cargarSys(f);}
   else if(t.id==='f-tabla'){var g=t.files&&t.files[0];t.value='';prepararTabla(g);}
   else if(t.id==='opt-precio'){S.opts.precio=t.checked;if(S.sys)correr();}
+  else if(t.id==='f-shop'){var s=t.files&&t.files[0];t.value='';cargarShopify(s);}
+  else if(t.id==='shop-precio'){S.shop.opts.precio=t.checked;reprocesarShopify();}
+  else if(t.id==='shop-mult'){var m=Number(t.value);if(!Number.isNaN(m)&&m>0){S.shop.opts.mult=m;reprocesarShopify();}}
 });
 document.addEventListener('input',function(e){
   if(e.target.id==='buscar'){S.q=e.target.value;S.limite=100;pintarLista();}
