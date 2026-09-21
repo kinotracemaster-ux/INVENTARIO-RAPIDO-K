@@ -265,7 +265,7 @@ function procesar(tabla,sys,opts){
   var usados=new Set(),prod=new Set(),cod=new Set(),cruz=new Set();
   var cambios=new Map(),sin=new Map(),formato=new Map();
   var hojas=tabla.hojas.map(function(hoja){
-    var st={prod:hoja.rows.length,conCodigo:0,cruzan:0,sd:0,pd:0,sin:0,formato:0};
+    var st={prod:hoja.rows.length,conCodigo:0,cruzan:0,sd:0,pd:0,sin:0,formato:0,subeS:0,bajaS:0,subeP:0,bajaP:0};
     var rows=hoja.rows.map(function(row,ix){
       var nr=row.slice();
       var key=(row[I.id]!=null&&row[I.id]!=='')?String(row[I.id]):hoja.nombre+'#'+ix;
@@ -299,8 +299,8 @@ function procesar(tabla,sys,opts){
         if(pDespues!==pAntes){pdif=true;nr[I.precio]=pDespues;}
       }
       if(sdif||pdif){
-        if(sdif)st.sd++;
-        if(pdif)st.pd++;
+        if(sdif){st.sd++;if(despues>(antes||0))st.subeS++;else st.bajaS++;}
+        if(pdif){st.pd++;if(pDespues>(pAntes||0))st.subeP++;else st.bajaP++;}
         var c=cambios.get(key);
         if(!c){c=Object.assign({},base,{sb:antes,sa:despues,pb:pAntes,pa:pDespues,sd:sdif,pd:pdif,hojas:[]});cambios.set(key,c);}
         c.hojas.push(hoja.nombre);
@@ -545,7 +545,7 @@ function renderChain(){
   t.hojas.forEach(function(hoja,i){
     var st=res&&res.hojas[i]?res.hojas[i].st:null;
     h+='<article class="node'+(st?' on':'')+'"><span class="lab">'+esc(hoja.nombre)+'</span>'+
-      (st?'<span class="big">'+fmt(st.sd)+'</span><span class="cap">cambian de stock</span><span class="sm">'+fmt(st.pd)+' de precio<br>cruzan '+fmt(st.cruzan)+' de '+fmt(st.prod)+'</span>'
+      (st?'<span class="big">'+fmt(st.sd)+'</span><span class="cap">cambian de stock'+badgesDir(st.subeS,st.bajaS)+'</span><span class="sm">'+fmt(st.pd)+' de precio'+badgesDir(st.subeP,st.bajaP)+'<br>cruzan '+fmt(st.cruzan)+' de '+fmt(st.prod)+'</span>'
          :'<span class="big">'+fmt(hoja.rows.length)+'</span><span class="cap">productos</span><span class="sm">esperando el SYS</span>')+
       '<button type="button" class="btn" id="btn-bajar-'+i+'" data-act="bajar" data-i="'+i+'"'+((st&&!S.saving)?'':' disabled')+'>Bajar .xlsx</button></article>';
   });
@@ -585,6 +585,12 @@ function pintarChips(){
   var c=S.res.cambios,nS=c.filter(function(x){return x.sd;}).length,nP=c.filter(function(x){return x.pd;}).length;
   var chip=function(f,t,n){return '<button type="button" class="chip" data-act="chip" data-f="'+f+'" aria-pressed="'+(S.filtro===f)+'">'+t+' '+fmt(n)+'</button>';};
   $('#chips').innerHTML=chip('todos','Todos',c.length)+chip('stock','Stock',nS)+chip('precio','Precio',nP);
+}
+function badgesDir(subieron,bajaron){
+  var h='';
+  if(subieron) h+='<span class="delta up">↑'+fmt(subieron)+'</span>';
+  if(bajaron) h+='<span class="delta down">↓'+fmt(bajaron)+'</span>';
+  return h;
 }
 function deltaStock(x){
   var d=(x.sa||0)-(x.sb||0);

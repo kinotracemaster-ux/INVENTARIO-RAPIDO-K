@@ -80,6 +80,7 @@ python3 sys-a-kyte/tools/generar_tabla.py "mi_excel.xlsx"
 - Saltos de línea `\r\n` del Excel se normalizan a `\n` al leer la tabla.
 - El Artifact solo carga scripts desde `cdnjs` y `cdn.jsdelivr.net/npm/`; el sandbox bloquea `fetch` y descargas directas (`tabla.js` se carga con `<script src>`, no `fetch`; las descargas usan `downloads.save`, una a la vez).
 - No se declaró la capacidad `db` en el Artifact a propósito (lo haría exclusivo de la organización).
+- **Sesiones de Claude Code en la nube:** el Chromium pre-instalado del sandbox puede no coincidir con la versión que trae el `pip install playwright` más reciente (error `Executable doesn't exist at .../chromium_headless_shell-XXXX`). No correr `playwright install` (no hay red para bajar el browser o se pisa el pre-instalado). Ver qué revisión hay en `/opt/pw-browsers/*.json` o en el Playwright de Node global (`/opt/node22/lib/node_modules/playwright/package.json`) e instalar esa misma versión con pip, ej. `pip install playwright==1.56.0`.
 
 ## Limpieza hecha el 21 sep 2026
 
@@ -91,6 +92,7 @@ Agregar una línea arriba de todo (más reciente primero) cada vez que se resuel
 
 | Fecha | Tipo | Nota |
 |---|---|---|
+| 2026-09-21 | avance | Tarjetas por hoja (`#chain`) ahora muestran cuánto de "cambian de stock" y "de precio" es suba vs. baja (`↑N` verde / `↓N` rojo), reusando `.delta up/down` ya existente — sin colores nuevos. Cambio solo visual: `procesar()` suma `st.subeS/bajaS/subeP/bajaP`, no toca los archivos que se descargan (test/run.py sigue en TODO OK, celda por celda). |
 | 2026-09-21 | decisión | Flujo de git cambiado: se pushea directo a `main`, sin ramas por feature (Kino verifica en vivo). Ver sección "Flujo de git" arriba. |
 | 2026-09-21 | avance | Creado `CLAUDE.md` como memoria de arranque para Claude Code, para no re-explorar el proyecto en cada sesión. |
 | 2026-09-21 | avance | Documentado en MEMORIA_PROYECTO.md el deploy Node/Express + Railway (`server.js`, `package.json`); seguía sin aparecer ahí. Pendiente probar el deploy real. |
