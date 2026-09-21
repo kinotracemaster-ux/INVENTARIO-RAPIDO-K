@@ -198,7 +198,7 @@ function nombreArchivo(n,ext){return n.trim().replace(/[^\w\-]+/g,'_').replace(/
 var S={
   tabla:(window.__TABLA__&&window.__TABLA__.hojas&&window.__TABLA__.hojas.length)?window.__TABLA__:null,
   sesion:false, sys:null, res:null, opts:{precio:true,mult:2},
-  shop:{datos:null,res:null,opts:{precio:true,mult:2.8},limite:50},
+  shop:{datos:null,res:null,opts:{precio:true,mult:2.8},limite:50,sinHoja:false},
   filtro:'todos', q:'', limite:100, pend:null, aviso:null, saving:false,
   dlP:Promise.resolve(null), artP:Promise.resolve(null)
 };
@@ -360,6 +360,32 @@ function procesar(tabla,sys,opts){
   };
 }
 
+/* Única fuente para Shopify POEDAGAR: los artículos del SYS que también
+   están en la hoja "POEDAGAR" de la tabla de Kyte (por Código, mismo
+   criterio exacto+formato que procesar()). Sin esto, "SKU nuevos" traía
+   cualquier cosa del SYS (otras marcas, accesorios sueltos) — no solo lo
+   que es POEDAGAR. Devuelve null si no hay hoja "POEDAGAR" en la tabla. */
+function sysDeHoja(tabla,sys,nombreHoja){
+  if(!tabla||!sys) return null;
+  var hoja=tabla.hojas.filter(function(h){return norm(h.nombre)===norm(nombreHoja);})[0];
+  if(!hoja) return null;
+  var usados=new Set();
+  hoja.rows.forEach(function(row){
+    var cod=row[I.cod]==null?'':String(row[I.cod]).trim();
+    if(!cod) return;
+    var rec=sys.k1.get(k1(cod));
+    if(!rec){var a=sys.k2.get(k2(cod));if(a&&a.length===1)rec=a[0];}
+    if(rec) usados.add(rec);
+  });
+  var lista=Array.from(usados),mapa=new Map();
+  lista.forEach(function(r){mapa.set(k1(r.art),r);});
+  return {lista:lista,k1:mapa,nombre:sys.nombre,n:lista.length};
+}
+function calcularShopify(){
+  var sysShop=S.sys?sysDeHoja(S.tabla,S.sys,'POEDAGAR'):null;
+  S.shop.sinHoja=!!S.sys&&!sysShop;
+  S.shop.res=(S.shop.datos&&sysShop)?procesarShopify(S.shop.datos,sysShop,S.shop.opts):null;
+}
 /* Repetidos, huérfanas: fuera de alcance acá. Los SKU nuevos (del SYS, sin
    usar en este archivo de Shopify) se muestran en pantalla y, si Kino las
    pide, se pueden bajar como filas nuevas (ver filaNuevaShopify) — pero
@@ -544,12 +570,11 @@ function correr(){
   }else if(S.sys.dups||S.sys.inval){
     S.aviso={tipo:'info',txt:'En el SYS ignoré '+fmt(S.sys.dups)+' artículo(s) repetido(s) y '+fmt(S.sys.inval)+' fila(s) sin existencia numérica.'};
   }
-  if(S.shop.datos) S.shop.res=procesarShopify(S.shop.datos,S.sys,S.shop.opts);
+  calcularShopify();
   render();
 }
 function reprocesarShopify(){
-  if(!S.shop.datos||!S.sys) return;
-  S.shop.res=procesarShopify(S.shop.datos,S.sys,S.shop.opts);
+  calcularShopify();
   renderShopify();
 }
 async function cargarShopify(file){
@@ -751,9 +776,13 @@ function renderShopify(){
     el.innerHTML='<h2>Shopify · POEDAGAR</h2><p class="empty">Cuando subas el SYS arriba, acá vas a poder subir el export de productos de Shopify y actualizar stock (y precio, si querés) por Variant SKU.</p>';
     return;
   }
+  if(S.shop.sinHoja){
+    el.innerHTML='<h2>Shopify · POEDAGAR</h2><p class="empty">No encontré una hoja llamada "POEDAGAR" en tu tabla de Kyte. Es la única fuente que uso acá para cruzar Shopify — así evito traer productos de otras marcas o accesorios sueltos del SYS. Revisá el nombre de esa hoja en el Excel de la tabla base ("Cambiar tabla" arriba).</p>';
+    return;
+  }
   var sh=S.shop,h='<h2>Shopify · POEDAGAR</h2>';
   if(!sh.datos){
-    h+='<p class="empty">Subí el CSV que exportás de Shopify (Productos → Exportar). Actualizo cada Variant SKU que cruce con el SYS — no toco nada más del archivo, ni agrego ni saco filas.</p>'+
+    h+='<p class="empty">Subí el CSV que exportás de Shopify (Productos → Exportar). Cruzo cada Variant SKU contra los artículos del SYS que están en tu hoja POEDAGAR de Kyte — no toco nada más del archivo, ni agrego ni saco filas.</p>'+
       '<button type="button" class="btn pri" id="btn-pick-shop" data-act="pick-shop">Elegir CSV de Shopify</button>';
     el.innerHTML=h;
     return;
