@@ -181,10 +181,20 @@ function peso(n){return n==null?'—':'$ '+fmt(n);}
 function norm(s){return String(s==null?'':s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
 function k1(s){return String(s).trim().toUpperCase();}
 function k2(s){return String(s).toUpperCase().replace(/[\s\-_:.\/\\]+/g,'');}
+/* Números del SYS como texto, en cualquiera de los dos formatos: "33,000.00"
+   (coma miles, punto decimal — lo que trae el SYS real) o "15000,50" /
+   "1.234,56" (punto miles, coma decimal). El separador decimal es el que
+   aparece último; el otro, si aparece, es de miles y se borra. Con un solo
+   separador y ≤2 dígitos después, se asume decimal (ambiguo si no). */
 function aNum(v){
   if(typeof v==='number') return v;
-  if(v==null||String(v).trim()==='') return NaN;
-  return Number(String(v).trim().replace(',','.'));
+  if(v==null) return NaN;
+  var s=String(v).trim().replace(/[^0-9,.\-]/g,'');
+  if(s==='') return NaN;
+  var uc=s.lastIndexOf(','),up=s.lastIndexOf('.');
+  if(uc>-1&&up>-1) s=uc>up?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,'');
+  else if(uc>-1) s=(s.length-uc-1<=2)?s.replace(',','.'):s.replace(/,/g,'');
+  return Number(s);
 }
 function corto(n){return String(n).split(/\s+/)[0];}
 function fechaCorta(d){return d.getDate()+' '+MES[d.getMonth()]+' '+d.getFullYear();}
