@@ -236,11 +236,17 @@ Además de Kyte, la misma app actualiza el export de productos de Shopify de la 
 
 **Aviso de SKU repetidos:** si el CSV subido trae el mismo `Variant SKU` en más de una fila (pasa en la práctica — caso real visto: `938B-5` ×4), se avisa en pantalla pero se procesa igual (cada fila con ese SKU recibe el mismo stock/precio; conviene revisarlo en Shopify).
 
-**Funciones en `sys-a-kyte.html`:** `leerShopify()` (ubica columnas `Variant SKU`/`Variant Inventory Qty`/`Variant Price` por nombre, conserva las 47 columnas originales tal cual), `procesarShopify()` (el cruce), `csvShopify()` (arma el CSV de salida con `XLSX.utils.sheet_to_csv`), `renderShopify()` (pantalla, reusa `badgesDir()` de las tarjetas de Kyte para los `↑`/`↓`).
+**Reporte (.xlsx) — marca los SKU nuevos** (agregado 21 sep 2026, a pedido de Kino: "importante marcar los nuevos"): botón aparte del CSV para resubir. Es un Excel de solo lectura, mismo criterio que el "Reporte de cambios" de Kyte:
+- `Resumen`: productos, cruzan, cambian stock, cambian precio, sin cruzar, SKU nuevos con stock.
+- `Nuevos en SYS`: Artículos del SYS con stock > 0 que **ningún** Variant SKU de ese archivo de Shopify usó — candidatos a sumar al catálogo. Mismas 3 columnas de clasificación que la hoja homónima del reporte de Kyte (Marca / Accesorio / Familia ya en Shopify — esta última compara contra los SKU que sí están en el archivo de Shopify, no contra Kyte), reusando `clasificarNuevo()`, `MARCAS`, `ACCESORIOS`, `familiaCod()` (definidas para Kyte en la sección "Motor de actualización").
+- `Sin cruzar`: los Variant SKU del archivo de Shopify que el SYS no trae (lista simple).
+- Igual que con Kyte: **nunca se agregan filas solas** a ningún archivo — esto es solo informe, para que Kino decida.
 
-**Verificado (21 sep 2026)** con un export real de Shopify (107 productos, 541 variantes/SKU): 532 de 541 SKU cruzaron con el SYS de prueba (`datos/INVENTARIO_KINO_18_de_sep.xlsx`), y el CSV descargado coincidió celda por celda (541 filas × 47 columnas) contra un cálculo independiente en Python.
+**Funciones en `sys-a-kyte.html`:** `leerShopify()` (ubica columnas `Variant SKU`/`Variant Inventory Qty`/`Variant Price` por nombre, conserva las 47 columnas originales tal cual), `procesarShopify()` (el cruce, ahora también calcula `nuevos`/`sinCruzar` para el reporte), `csvShopify()` (arma el CSV de salida con `XLSX.utils.sheet_to_csv`), `libroReporteShopify()` (el Excel de arriba), `renderShopify()` (pantalla, reusa `badgesDir()` de las tarjetas de Kyte para los `↑`/`↓`).
 
-**Pendiente / no construido:** no quedó como test automatizado en `test/run.py` — el CSV real de Shopify no se subió al repo por ser datos propios de Kino, no de prueba. Si se toca `leerShopify`/`procesarShopify`, conviene rearmar la verificación a mano (subir un CSV real, comparar contra un cálculo independiente) antes de publicar. Tampoco hay drag&drop para el CSV de Shopify (solo botón), ni tabla "antes → después" fila por fila como la de Kyte — solo el resumen en la tarjeta.
+**Verificado (21 sep 2026)** con un export real de Shopify (107 productos, 541 variantes/SKU) contra el SYS de prueba (`datos/INVENTARIO_KINO_18_de_sep.xlsx`): 532 de 541 SKU cruzaron; el CSV descargado coincidió celda por celda (541 filas × 47 columnas) contra un cálculo independiente en Python; el reporte dio 2.660 SKU nuevos con stock y las 2.660 filas clasificaron idéntico (Marca/Accesorio/Familia) contra la misma verificación independiente, y "Sin cruzar" coincidió exacto (9 SKU).
+
+**Pendiente / no construido:** no quedó como test automatizado en `test/run.py` — el CSV real de Shopify no se subió al repo por ser datos propios de Kino, no de prueba. Si se toca `leerShopify`/`procesarShopify`/`libroReporteShopify`, conviene rearmar la verificación a mano (subir un CSV real, comparar contra un cálculo independiente) antes de publicar. Tampoco hay drag&drop para el CSV de Shopify (solo botón), ni tabla "antes → después" fila por fila como la de Kyte — solo el resumen en la tarjeta.
 
 ---
 
